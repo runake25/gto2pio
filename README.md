@@ -2,192 +2,114 @@
 
 [![check](https://github.com/runake25/gto2pio/actions/workflows/check.yml/badge.svg)](https://github.com/runake25/gto2pio/actions/workflows/check.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![no dependencies](https://img.shields.io/badge/dependencies-none-brightgreen.svg)](#why-there-is-no-backend)
+[![dependencies: none](https://img.shields.io/badge/dependencies-none-brightgreen.svg)](#architecture--tech-stack)
 
-**Use it here: <https://runake25.github.io/gto2pio/>**
+**Live demo: <https://runake25.github.io/gto2pio/>**
 
-Paste a **GTO Wizard solution JSON**, tick the actions you want to keep
-(everything except fold is ticked by default), and copy a ready-to-paste
-**PioSOLVER range string**:
+GTO Wizard shows you a solution, PioSOLVER wants a range string. This page does the
+conversion in your browser: copy the `spot-solution` JSON out of GTO Wizard, paste it,
+tick the actions you want, copy the finished Pio range. Nothing is uploaded - no backend,
+no account, no cost.
 
-```
-AA,KK,QQ:0.45,JJ:0.45,TT:0.45,99:0.45,88,77,66,55,44,33,22,AK,AQ,AJ,AT,A9:0.45,...
-```
+## Key features
 
-No payload at hand? **Load GTO Wizard sample** converts a real 218 KB response.
-There is also a **How to use** tab next to the converter with a walkthrough.
+- **Eight payload shapes detected automatically** - GTO Wizard `action_solutions`
+  (169-element `strategy` arrays), strategy matrices with a hand axis, hand&rarr;frequencies,
+  hand&rarr;action maps, one record per hand, one object per action, single weights, and the
+  aggregated per-hand `actions_total_combos` report.
+- **Gets the weights right.** GTO Wizard's frequencies are relative to the combos a hand
+  still has at that node, its combo totals are absolute - both are combined, and the
+  payload's own totals pick the reading. If a range cannot be reproduced from them you get
+  an amber warning instead of a silently wrong result.
+- **Every action stays separate.** `F`, `C`, `R2.5`, `R31.5`, `RAI` each get their own tick
+  box, colour, share and range text - an all-in can never hide inside "raise".
+- **Coloured 13&times;13 grid**: every cell is sliced into the action colours in their real
+  proportions, with a legend that matches the tick boxes.
+- **Output controls**, each with a `?` badge and a concrete example: decimals (0-6), minimum
+  weight, suited+offsuit merging on equal weights, and a 0-1 vs 0-100 scale override.
+- **Presets**: Raise + Call, Continues (everything but fold), All, None.
+- **How to use tab** with a four-step guide and an annotated screenshot of the Network tab.
+- **Zero dependencies, zero build step, works offline** - save the files and paste JSON
+  without a server; the copy/download and per-action ranges all run locally.
+- **Checked on every push**: CI converts the shipped sample in Node and asserts the range
+  and the per-action combo totals; a headless-Chrome smoke test drives the real page.
 
-Everything happens inside your browser tab: **your hands are never uploaded**, and
-there is no server to go down or to pay for.
+**Limits:** it converts JSON **to** a Pio range (not back), it converts the node you copied
+(one street, one player), and frequencies are assumed to be fractions of 1 unless the
+payload clearly uses percentages - use **Scale** if the guess is wrong.
 
-## Getting the JSON out of GTO Wizard
+## Quickstart
 
-1. Open the spot you want in GTO Wizard and let its solution load on screen.
-2. Open the browser developer tools (`F12`, or `Ctrl`+`Shift`+`I` - see
-   [how to open DevTools](https://developer.chrome.com/docs/devtools/open)) and switch to
-   the [Network tab](https://developer.chrome.com/docs/devtools/network).
-3. Filter the request list by `spot` - the request called **`spot-solution`** is the one
-   that carries the solution.
-4. Click it, open the **Response** tab, copy the whole JSON, paste it into the converter
-   and press **Convert**.
+**Use the live page** (<https://runake25.github.io/gto2pio/>):
 
-An empty list just means DevTools was opened after the request had happened: leave it
-open and reload the page (or reopen the spot) and `spot-solution` shows up again. A real
-response is around 200 KB, and the field that makes it recognisable is `action_solutions`.
-The **How to use** tab of the site shows the same flow with an annotated screenshot of the
-Network tab.
+1. Open the spot you want in GTO Wizard.
+2. Press `F12`, click the **Network** tab, and type `spot` in its filter box.
+3. Copy the response of the `spot-solution` request (right click &rarr; *Copy*).
+4. Paste it into the page, press **Convert**, tick the actions, press **Copy**.
 
-## Why there is no backend
+No payload at hand? **Load GTO Wizard sample** converts a real 218 KB response first.
 
-The whole converter is JavaScript under `js/lib` - no dependencies, no build
-step, no CDN. That is what makes this site hostable for free on GitHub Pages, and
-it means you can save the files and use the tool offline as well.
-
-## What it does
-
-* **Auto-detects eight payload shapes** instead of demanding one exact layout -
-  including the real GTO Wizard `/solution/` response with 169-element
-  `strategy` arrays and its aggregated per-hand `actions_total_combos` report
-  (see [Supported payloads](#supported-payloads)).
-* **Gets the weights right.** GTO Wizard reports a hand's action frequencies relative
-  to the combos that hand still has at that node, and reports the combo totals
-  separately - so the converter multiplies them: a hand that is only half in range
-  also keeps half its weight, which is what PioSOLVER expects. The hand axis is read
-  from the payload itself (`players_info[].simple_hand_counters`), every axis
-  candidate is validated against the payload's own `total_combos`, and when a range
-  cannot be reproduced from them you get an amber warning instead of a silently wrong
-  range.
-* **Every action stays separate.** `F`, `C`, `R2.5`, `R31.5`, `RAI` each get
-  their own tick box, colour, share and range text. Nothing is merged behind your
-  back, so an all-in can never hide inside \"raise\", and a 31.5 raise never mixes
-  with a 2.5 raise.
-* **Output controls**: decimals (0-6), minimum weight, suited+offsuit merging on
-  equal weights (`AK` instead of `AKs,AKo`), and a 0-1 vs 0-100 frequency scale
-  override. Every option has a `?` badge next to it - hover it (or tab to it) for
-  what it does and a concrete example.
-* **Feedback you can trust**: combo count and % of all 1326 combos as chips, a
-  13x13 grid where each cell is **sliced into the action colours in their real
-  proportions** (what GTO Wizard's own grid does), a colour legend, one range per
-  action, and an inspector. When something could not be confirmed (for example a
-  hand axis that does not match the payload's own combo counts) you get an amber
-  warning next to the **Convert** button instead of a silently wrong range.
-
-## Supported payloads
-
-| # | Shape | Example |
-|---|-------|---------|
-| 1 | GTO Wizard `action_solutions` (`strategy` arrays) | `{"action_solutions": [{"action": {"code": "R2.5"}, "strategy": [...169...], "total_combos": 138.4}]}` |
-| 2 | strategy matrix + hand axis (either orientation) | `{"hands": ["AA", "KK"], "strategy": [[1, 0], [0.5, 0.5]]}` |
-| 3 | hand &rarr; frequency list | `{"AA": [0.6, 0.4], "KK": [1.0, 0.0]}` |
-| 4 | hand &rarr; action map | `{"AA": {"RAISE": 0.6, "CALL": 0.4}}` |
-| 5 | one record per hand | `[{"hand": "AA", "actions": [{"action": "R", "frequency": 0.6}]}]` |
-| 6 | one object per action | `[{"action": {"code": "R"}, "strategy": {"AA": 0.5, "KK": 1.0}}]` |
-| 7 | single weight per hand (no action axis) | `{"AA": 0.5, "KK": 1.0}` |
-| 8 | GTO Wizard aggregated report (combos per action) | `{"53o": {"name": "53o", "total_combos_available": 12, "actions_total_combos": {"F": 12, "C": 0, "R31.5": 0, "RAI": 0}}}` |
-
-Shape 8 lists how many **combos** take each action instead of a frequency, so the
-combos are divided by `total_combos_available` - the same denominator GTO Wizard
-uses for its own `total_frequency`. Every key becomes its own action (`F`, `C`,
-`R31.5`, `RAI`), and because the aggregated report is a *summary*, it is only used
-when the payload carries no real per-action solution block.
-
-Frequencies may be numbers, numeric strings (`"45"`, `"45%"`) or
-`{"frequency": 0.5}` objects. Combo-level payloads (`AhAd`) are averaged into
-their hand class, which is how PioSOLVER applies one weight to every combo.
-Trailing commas and `const data = {...};` wrapping are tolerated too.
-
-## Run it locally
+**Run it locally** (under two minutes, nothing to install but Python or Node):
 
 ```bash
 git clone https://github.com/runake25/gto2pio.git
 cd gto2pio
-python -m http.server 8000        # or: npx serve .
+python -m http.server 5099        # or: npx serve .
+# open http://127.0.0.1:5099/
 ```
 
-Then open <http://localhost:8000>. Opening `index.html` straight from disk also
-works (the **Example** button is built in); only the *Load sample* dropdown needs
-a web server, because browsers block `fetch()` on `file://`.
+`index.html` also opens straight from disk; only the *Load sample* button needs a web
+server, because browsers block `fetch()` on `file://`.
 
-## Deploy your own copy
+**Deploy your own copy:** fork the repo, then **Settings &rarr; Pages &rarr; Deploy from a
+branch &rarr; `main` / `/ (root)`**. No build step, so it is live within a minute.
 
-Fork this repo, then **Settings &rarr; Pages &rarr; Build and deployment &rarr;
-Deploy from a branch &rarr; `main` / `/ (root)`**. There is no build step, so the
-site is live within a minute and every commit redeploys it. Jekyll processing is
-off (`.nojekyll`).
+## Configuration
 
-GitHub Pages serves these files with a 10 minute cache. Because the page and its
-scripts are cached separately, a visitor can end up running a script from the
-version they loaded earlier against a newer page - so **bump the `?v=` query on
-every asset in `index.html` when you release** (and bump `GTO2PIO.VERSION` with
-it). The page also detects that mismatch, puts a red banner at the top and tells
-the visitor to hard-refresh instead of failing with a JavaScript error.
+**Nothing to configure: no environment variables, no secrets, no API keys, no `.env`** -
+the page is static and converts in your browser. The only knobs are files:
 
-## Files
+| Knob | Where | Value |
+|---|---|---|
+| Sample payload | `samples/gw_action_solutions.json` | shipped real GTO Wizard response (218 KB) |
+| Cache-busting version | `?v=` on all 13 assets in `index.html` + `GTO2PIO.VERSION` | `0.3.7` - bump both on every release |
+| Local port | the `python -m http.server <port>` command | `5099` (any free port) |
+| Conversion options | the **Options** card in the UI | merge: no, decimals: 2, min weight: 0, scale: auto |
+| How-to guide text | `index.html`, inside `<section class="tut">` | plain HTML, edit freely |
+
+GitHub Pages caches these files for 10 minutes, and the page plus its scripts are cached
+separately - so a visitor can run an older script against a newer page. That is why the
+`?v=` query is bumped on every asset in `index.html` at release time; the page also
+detects the mismatch and shows a red "hard-refresh" banner instead of failing.
+
+## Architecture / tech stack
+
+| Piece | Detail |
+|---|---|
+| Runtime | Static HTML + CSS + JavaScript: plain `<script>` tags on one `GTO2PIO` namespace. No build step, no bundler, no framework, no CDN, no dependency |
+| Backend | None. Nothing to host, nothing to pay for; GitHub Pages serves the files (`.nojekyll`, so no Jekyll pass) |
+| Converter | `js/lib/*` - pure logic, no DOM: `schema.js` detects the payload shape, `parser.js` builds the result, `pio.js` writes the range, `hands.js`/`actions.js`/`common.js` support them |
+| Page | `js/ui/*` - one file per concern: `dom.js` state, `colors.js` palette, `render.js` drawing, `files.js` copy + sample, `main.js` wiring, tabs and presets |
+| Data | `samples/gw_action_solutions.json` - the real response the **Load sample** button converts |
+| Quality gates | `.github/workflows/check.yml` (Node 20: syntax check + converts the sample and asserts the per-action combos 534.49 / 491.45 / 91.01) and a headless-Chrome smoke test kept in the author's dev tree |
 
 ```
-index.html            one page, no framework
-js/lib/               the converter (no DOM in here)
-  common.js             shared helpers, python-compatible rounding, ParseError
-  hands.js              the 169 hand classes, combo counts, canonicalisation
-  actions.js            action codes and words -> families and labels
-  pio.js                Pio range emission and combo statistics
-  schema.js             detection of a pasted payload (the eight shapes)
-  parser.js             analyze(): detected strategy -> ready-to-use result
-  gto2pio.js            the public API (GTO2PIO.analyze, GTO2PIO.VERSION, ...)
-js/ui/                the page, one file per concern
-  dom.js                element lookups, UI state, status/error feedback
-  colors.js             the action palette, shared by picker, grid and legend
-  render.js             drawing a result: actions, range, chips, sliced grid
-  files.js              copy/download, samples, the file input
-  main.js               analyze() wiring, presets, disclosures, init()
-css/style.css         styling (no framework, dark by default)
-assets/favicon.ico    site icon
-samples/              the shipped payload: a real GTO Wizard response (218 KB)
+index.html      the app: converter panel + How-to-use tab
+css/style.css   styling (dark by default)
+js/lib/         the converter (no DOM)
+js/ui/          the page
+assets/         favicon + the annotated Network-tab screenshot
+samples/        the shipped GTO Wizard payload
 ```
 
-The **how-to tab** lives in `index.html` inside `<section class="tut">` - plain
-HTML, edit it freely.
+## License & contributing
 
-Every file is a plain `<script>`: each one attaches itself to the `GTO2PIO`
-namespace, so the load order in `index.html` is the only wiring this site needs.
+[MIT](LICENSE) &copy; 2026 runake25. Not affiliated with GTO Wizard or PioSOLVER - both are
+trademarks of their owners; this tool only reads the JSON you paste and writes plain text.
 
-## How this was verified
+Found a payload that converts wrongly, or have an idea? Open an issue at
+<https://github.com/runake25/gto2pio/issues> with the shape you pasted (trim anything
+private) and what you expected instead. Pull requests are welcome: keep the
+zero-dependency, no-build-step constraint and the existing structure, and CI will check
+your push with `check.yml`.
 
-* The JavaScript converter is a port of a Python implementation that came with 90
-  unit tests, and the port was checked against it over **112 (payload x option)
-  combinations** - identical `range_text`, per-action ranges, combo statistics,
-  notes and warnings on every one, including a real 177 KB GTO Wizard payload.
-  That reference implementation and its harness stay in the author's working tree,
-  because this repository is deliberately just the deployable site.
-* A headless-browser smoke test drives the page the way a user does: load the
-  shipped sample, click **Convert**, then assert the range (582.46 combos / 43.93%),
-  the stats chips, the 169-cell grid, the coloured slices, the colour legend and
-  swatches, the five option tips, the per-action panels, the **Load sample** button,
-  the tab switch to the tutorial, the footer's GitHub link, an aggregated
-  `actions_total_combos` payload (checking that `R31.5` and `RAI` stay separate
-  actions), the empty-box and unrecognised-payload error paths, the stale-script
-  banner, and that no JavaScript error was logged.
-* The per-action combo totals of the shipped payload (fold 534.49, call 491.45,
-  raise 31.5 91.01) are asserted in CI, so the frequency scaling cannot silently
-  regress.
-* CI (`.github/workflows/check.yml`) syntax-checks both scripts and converts the
-  shipped sample in Node on every push.
-
-## Limitations
-
-* It converts JSON **to** a Pio range, not the other way round.
-* Frequencies are assumed to be fractions of 1 unless the payload clearly uses
-  percentages; use the **Scale** option if the auto-detection guesses wrong.
-* If a payload carries a hand axis in an order that neither its own combo
-  counters nor GTO Wizard's implied order reproduces, you get a warning telling
-  you the axis could not be confirmed - the range may be wrong then, so check it.
-* Only what you paste is converted: pick the right node in GTO Wizard (one
-  street, one player) before copying the JSON.
-
-## License
-
-[MIT](LICENSE) &copy; 2026 runake25.
-
-Not affiliated with GTO Wizard or PioSOLVER - both are trademarks of their
-owners. This tool only reads the JSON you paste into it and writes a plain text
-range.
