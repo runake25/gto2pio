@@ -96,7 +96,7 @@ function showError(message, diagnostics) {
   setStatus("error", "err");
   setInlineStatus(
     "Nothing converted - " + shortMessage(message, 220) +
-      "\nMore detail is in the red box on the right, full structure in the Inspector at the bottom.",
+      "\nMore detail is in the red box under the Convert button, full structure in the Inspector under the range.",
     "err"
   );
   scrollToOutput();
