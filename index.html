@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GTO Wizard &rarr; PioSOLVER range converter</title>
+  <meta name="description" content="Paste a GTO Wizard solution JSON and get a ready-to-use PioSOLVER range string. Runs entirely in your browser - no upload, no server.">
+  <link rel="icon" href="favicon.ico">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>GTO Wizard &rarr; PioSOLVER</h1>
+      <p class="sub">Paste a solution JSON, tick the actions you want, copy the Pio range.</p>
+    </div>
+    <div class="topbar-right">
+      <span id="status" class="status">idle</span>
+      <span class="version" id="version">v-</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>1 &middot; Paste JSON</h2>
+        <div class="row">
+          <label class="filebtn">Load .json
+            <input type="file" id="file-input" accept=".json,.txt,application/json" hidden>
+          </label>
+          <select id="sample-select"><option value="">Load sample&hellip;</option></select>
+          <button type="button" id="example-btn" class="ghost">Example</button>
+          <button type="button" id="clear-btn" class="ghost">Clear</button>
+        </div>
+      </div>
+
+      <textarea id="json-input" spellcheck="false" placeholder='Paste the GTO Wizard response here, for example:
+
+{
+  "AA": { "RAISE": 0.6, "CALL": 0.4 },
+  "KK": { "RAISE": 0.25, "CALL": 0.2 }
+}'></textarea>
+
+      <details class="options" open>
+        <summary>Options</summary>
+        <div class="option-grid">
+          <label><input type="checkbox" id="opt-merge" checked> Merge raise/bet/all-in sizes</label>
+          <label><input type="checkbox" id="opt-allin" checked> Treat all-in as raise</label>
+          <label><input type="checkbox" id="opt-combine" checked> Merge suited+offsuit on equal weight</label>
+          <label><input type="checkbox" id="opt-combos" checked> Average per-combo data</label>
+          <label class="num">Decimals
+            <input type="number" id="opt-decimals" min="0" max="6" step="1" value="2">
+          </label>
+          <label class="num">Min weight
+            <input type="number" id="opt-min-weight" min="0" max="1" step="0.01" value="0">
+          </label>
+          <label class="num">Scale
+            <select id="opt-scale">
+              <option value="auto">auto</option>
+              <option value="fraction">0-1 fraction</option>
+              <option value="percent">0-100 percent</option>
+            </select>
+          </label>
+        </div>
+      </details>
+
+      <div class="row">
+        <button type="button" id="analyze-btn" class="primary">Convert (Ctrl+Enter)</button>
+        <span id="input-hint" class="hint"></span>
+      </div>
+      <div id="inline-status" class="inline-status" hidden></div>
+      <noscript>
+        <p class="muted">This tool converts the JSON entirely inside your browser, so JavaScript must be enabled.</p>
+      </noscript>
+    </section>
+
+    <section class="panel" id="output-panel">
+      <div class="panel-head">
+        <h2>2 &middot; Pick actions &amp; copy</h2>
+        <div class="row">
+          <button type="button" class="ghost" id="preset-raisecall">Raise + Call only</button>
+          <button type="button" class="ghost" id="preset-all">All</button>
+          <button type="button" class="ghost" id="preset-none">None</button>
+        </div>
+      </div>
+
+      <div id="error-box" class="error" hidden></div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>Extract from</h3>
+          <span id="detected-hint" class="hint"></span>
+        </div>
+        <p class="muted" id="actions-placeholder">Detected actions will appear here once you convert something.</p>
+        <div id="action-list" class="action-list"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3>Pio range</h3>
+          <div class="row">
+            <button type="button" class="ghost" id="copy-btn">Copy</button>
+            <button type="button" class="ghost" id="download-btn">Download .txt</button>
+          </div>
+        </div>
+        <textarea id="range-output" readonly spellcheck="false" placeholder="The converted range appears here"></textarea>
+        <div class="chips" id="stats-chips"></div>
+      </div>
+
+      <div class="card" id="notes-card" hidden>
+        <h3>Notes</h3>
+        <ul id="notes-list"></ul>
+        <ul id="warnings-list" class="warnings"></ul>
+      </div>
+
+      <div class="card">
+        <button type="button" class="disclosure" id="grid-toggle">Show 13&times;13 grid</button>
+        <div id="grid-box" class="grid-box" hidden></div>
+      </div>
+
+      <div class="card">
+        <button type="button" class="disclosure" id="per-group-toggle">Show per-action ranges</button>
+        <div id="per-group-box" class="per-group" hidden></div>
+      </div>
+
+      <div class="card">
+        <button type="button" class="disclosure" id="inspect-toggle">Inspector (detection details)</button>
+        <pre id="inspect-out" class="json" hidden></pre>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>Everything runs locally in this page - your JSON never leaves your browser.</span>
+    <span>Not affiliated with GTO Wizard or PioSOLVER.</span>
+    <a href="https://github.com/runake25/gto2pio">Source on GitHub</a>
+  </footer>
+
+  <script src="core.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

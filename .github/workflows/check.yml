@@ -1,0 +1,55 @@
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: syntax + sample conversion
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Syntax check
+        run: |
+          node --check core.js
+          node --check app.js
+
+      - name: Convert the shipped sample in node
+        run: |
+          node <<'JS'
+          const fs = require("fs");
+          require("./core.js");
+          const core = globalThis.GTO2PIO;
+          const fail = (message) => { console.error("FAIL: " + message); process.exit(1); };
+          const same = (actual, expected, label) => {
+            if (actual !== expected) fail(`${label}: got ${actual}, expected ${expected}`);
+          };
+
+          same(core.PIO_ORDER.length, 169, "169 hand classes");
+          same(core.gwHandOrder(169).slice(0, 4).join(","), "22,32o,32s,33", "GTO Wizard hand order");
+
+          const payload = fs.readFileSync("samples/gw_action_solutions.json", "utf8");
+          const result = core.analyze(payload);
+          same(result.detection.format_id, "gw_action_solutions", "detected format");
+          same(result.detection.hand_count, 169, "hands");
+          same(result.stats.combos, 150.8, "combos");
+          same(result.stats.percent, 11.37, "percent");
+          same(result.range_text.startsWith("AA,KK,QQ,JJ,TT,"), true, "range prefix");
+          same(result.warnings.length, 0, "no warnings for a well-formed payload");
+          same(result.grid && Object.keys(result.grid).length, 169, "13x13 grid");
+
+          let threw = false;
+          try { core.analyze('{"hello": "world"}'); } catch (error) {
+            threw = error instanceof core.ParseError && Boolean(error.diagnostics);
+          }
+          if (!threw) fail("an unrecognised payload should raise ParseError with diagnostics");
+
+          console.log("core.js converts the shipped sample correctly");
+          JS

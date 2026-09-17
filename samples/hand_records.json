@@ -1,0 +1,65 @@
+[
+  {
+    "hand": "AA",
+    "actions": [
+      { "action": "F", "frequency": 0.0 },
+      { "action": "C", "frequency": 0.05 },
+      { "action": "R", "betsize": 2.5, "frequency": 0.85 },
+      { "action": "RAI", "frequency": 0.1 }
+    ]
+  },
+  {
+    "hand": "KK",
+    "actions": [
+      { "action": "F", "frequency": 0.0 },
+      { "action": "C", "frequency": 0.15 },
+      { "action": "R", "betsize": 2.5, "frequency": 0.8 },
+      { "action": "RAI", "frequency": 0.05 }
+    ]
+  },
+  {
+    "hand": "QQ",
+    "actions": [
+      { "action": "F", "frequency": 0.0 },
+      { "action": "C", "frequency": 0.35 },
+      { "action": "R", "betsize": 2.5, "frequency": 0.65 },
+      { "action": "RAI", "frequency": 0.0 }
+    ]
+  },
+  {
+    "hand": "AKs",
+    "actions": [
+      { "action": "F", "frequency": 0.0 },
+      { "action": "C", "frequency": 0.1 },
+      { "action": "R", "betsize": 2.5, "frequency": 0.9 },
+      { "action": "RAI", "frequency": 0.0 }
+    ]
+  },
+  {
+    "hand": "A5s",
+    "actions": [
+      { "action": "F", "frequency": 0.25 },
+      { "action": "C", "frequency": 0.55 },
+      { "action": "R", "betsize": 2.5, "frequency": 0.2 },
+      { "action": "RAI", "frequency": 0.0 }
+    ]
+  },
+  {
+    "hand": "76s",
+    "actions": [
+      { "action": "F", "frequency": 0.4 },
+      { "action": "C", "frequency": 0.5 },
+      { "action": "R", "betsize": 2.5, "frequency": 0.1 },
+      { "action": "RAI", "frequency": 0.0 }
+    ]
+  },
+  {
+    "hand": "72o",
+    "actions": [
+      { "action": "F", "frequency": 1.0 },
+      { "action": "C", "frequency": 0.0 },
+      { "action": "R", "betsize": 2.5, "frequency": 0.0 },
+      { "action": "RAI", "frequency": 0.0 }
+    ]
+  }
+]
