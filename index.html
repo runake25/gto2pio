@@ -8,7 +8,7 @@
   <link rel="icon" href="assets/favicon.ico">
   <!-- Bump the ?v= on every asset when releasing: browsers cache these files for
        10 minutes, and a cached script paired with a newer page is what breaks. -->
-  <link rel="stylesheet" href="css/style.css?v=0.3.4">
+  <link rel="stylesheet" href="css/style.css?v=0.3.5">
 </head>
 <body>
   <header class="topbar">
@@ -141,28 +141,77 @@ No payload at hand? Press &quot;Load GTO Wizard sample&quot; (needs a web server
     <section class="tut">
       <h2>How to use the converter</h2>
       <p class="lead">
-        Three steps: get the JSON out of GTO Wizard, paste it here, tick the actions you
-        want in the range. Everything happens in this browser tab.
+        Grab the JSON of the spot you want from GTO Wizard, paste it on the left, tick the
+        actions that belong in the range, then copy the result into PioSOLVER. Everything
+        happens in this browser tab - nothing is uploaded anywhere.
       </p>
 
+      <h3>1 - Get the payload out of GTO Wizard</h3>
       <ol class="tut-steps">
         <li>
-          <strong>Copy the solution JSON out of GTO Wizard.</strong>
-          Open the node you care about, then grab the JSON of the solution response
-          (DevTools &rarr; Network &rarr; the request that returns
-          <code>action_solutions</code>). It is the payload with the <code>strategy</code>
-          arrays and the <code>players_info</code> block.
+          <strong>Open the spot you want in GTO Wizard</strong> and let the solution you
+          want to convert load on screen.
         </li>
         <li>
-          <strong>Paste it into the box and press Convert</strong>
-          (or <kbd>Ctrl</kbd>+<kbd>Enter</kbd>). The layout is detected on its own and the
-          tool reports how many hands it read.
+          <strong>Open the browser developer tools and switch to the Network tab</strong>
+          (<kbd>F12</kbd>, or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd>;
+          <kbd>Cmd</kbd>+<kbd>Option</kbd>+<kbd>I</kbd> on macOS).
         </li>
         <li>
-          <strong>Tick the actions that belong in the range.</strong>
-          Each one has its own colour, its own share and its own range text, then hit
-          <strong>Copy</strong> or <strong>Download .txt</strong> and paste the result into
-          PioSOLVER's range field.
+          <strong>Filter the request list by <code>spot</code></strong> - type
+          <code>spot</code> into the Network filter box. The request called
+          <code>spot-solution</code> is the one that carries the solution.
+          <span class="tut-note">
+            Nothing in the list? The Network tab only shows requests that happen while it is
+            open: leave it open and reload the page (<kbd>F5</kbd>) or reopen the spot, and
+            the <code>spot-solution</code> request appears.
+          </span>
+        </li>
+        <li>
+          <strong>Open that request's response and copy the whole JSON.</strong>
+          Click <code>spot-solution</code>, open the <code>Response</code> tab, then copy
+          everything - right click &rarr; <em>Copy</em>, or click inside the response and press
+          <kbd>Ctrl</kbd>+<kbd>A</kbd> then <kbd>Ctrl</kbd>+<kbd>C</kbd>.
+          <span class="tut-note">
+            You want the JSON that contains <code>action_solutions</code> and
+            <code>players_info</code>. The converter names the format it recognised right
+            after converting, so you see immediately whether you copied the right thing.
+          </span>
+        </li>
+      </ol>
+
+      <h3>2 - Paste it and convert</h3>
+      <ol class="tut-steps">
+        <li>
+          Click into the <strong>Paste JSON</strong> box on the left and paste
+          (<kbd>Ctrl</kbd>+<kbd>V</kbd>) - the whole response, however long it is. A real
+          spot response is around 200 KB, which is normal.
+        </li>
+        <li>
+          Press <strong>Convert</strong> (or <kbd>Ctrl</kbd>+<kbd>Enter</kbd>). The status
+          line then reports what was detected: the format, the number of hands and the
+          actions of that spot.
+        </li>
+        <li>
+          Nothing at hand? <strong>Load GTO Wizard sample</strong> converts a real response
+          so you can see the whole flow before pasting your own.
+        </li>
+      </ol>
+
+      <h3>3 - Pick the actions and copy the range</h3>
+      <ol class="tut-steps">
+        <li>
+          Every action of the spot is listed with its own colour, its own share of the range
+          and its own range text. Tick the ones the range should contain - call plus the
+          raises is what you get by default.
+        </li>
+        <li>
+          Shortcuts: <strong>Raise + Call</strong>, <strong>Continues</strong> (everything
+          except fold), <strong>All</strong> and <strong>None</strong>.
+        </li>
+        <li>
+          Hit <strong>Copy</strong> or <strong>Download .txt</strong> and paste the range
+          into PioSOLVER's range field.
         </li>
       </ol>
 
@@ -200,16 +249,12 @@ No payload at hand? Press &quot;Load GTO Wizard sample&quot; (needs a web server
 
       <h3>Good to know</h3>
       <ul class="tut-notes">
-        <li>The conversion runs entirely in your browser - your JSON is never uploaded.</li>
-        <li>One node at a time: pick the street and the player in GTO Wizard before copying.</li>
+        <li>A response covers the whole spot: the strategy arrays belong to the player who acts at that node, and that is the range you get.</li>
+        <li>The conversion runs entirely in your browser - your JSON is never uploaded and never sent to a server.</li>
+        <li>One node at a time: for another street or the other player, grab that spot's payload the same way.</li>
         <li>The <strong>Inspector</strong> under the range shows what was detected (format, score, the hand order it used, notes and warnings) whenever a payload looks off.</li>
         <li>It converts JSON to a Pio range, not the other way round.</li>
       </ul>
-
-      <p class="tut-edit">
-        TODO: this tab is yours - replace these notes with your own tutorial.
-        The markup lives in <code>index.html</code> inside <code>&lt;section class="tut"&gt;</code>.
-      </p>
     </section>
   </main>
 
@@ -230,18 +275,18 @@ No payload at hand? Press &quot;Load GTO Wizard sample&quot; (needs a web server
   </footer>
 
   <!-- the converter: plain scripts, so this order is the dependency order -->
-  <script src="js/lib/common.js?v=0.3.4"></script>
-  <script src="js/lib/hands.js?v=0.3.4"></script>
-  <script src="js/lib/actions.js?v=0.3.4"></script>
-  <script src="js/lib/pio.js?v=0.3.4"></script>
-  <script src="js/lib/schema.js?v=0.3.4"></script>
-  <script src="js/lib/parser.js?v=0.3.4"></script>
-  <script src="js/lib/gto2pio.js?v=0.3.4"></script>
+  <script src="js/lib/common.js?v=0.3.5"></script>
+  <script src="js/lib/hands.js?v=0.3.5"></script>
+  <script src="js/lib/actions.js?v=0.3.5"></script>
+  <script src="js/lib/pio.js?v=0.3.5"></script>
+  <script src="js/lib/schema.js?v=0.3.5"></script>
+  <script src="js/lib/parser.js?v=0.3.5"></script>
+  <script src="js/lib/gto2pio.js?v=0.3.5"></script>
   <!-- the page: dom -> colors -> render -> files -> main -->
-  <script src="js/ui/dom.js?v=0.3.4"></script>
-  <script src="js/ui/colors.js?v=0.3.4"></script>
-  <script src="js/ui/render.js?v=0.3.4"></script>
-  <script src="js/ui/files.js?v=0.3.4"></script>
-  <script src="js/ui/main.js?v=0.3.4"></script>
+  <script src="js/ui/dom.js?v=0.3.5"></script>
+  <script src="js/ui/colors.js?v=0.3.5"></script>
+  <script src="js/ui/render.js?v=0.3.5"></script>
+  <script src="js/ui/files.js?v=0.3.5"></script>
+  <script src="js/ui/main.js?v=0.3.5"></script>
 </body>
 </html>

@@ -20,6 +20,20 @@ There is also a **How to use** tab next to the converter with a walkthrough.
 Everything happens inside your browser tab: **your hands are never uploaded**, and
 there is no server to go down or to pay for.
 
+## Getting the JSON out of GTO Wizard
+
+1. Open the spot you want in GTO Wizard and let its solution load on screen.
+2. Open the browser developer tools (`F12`, or `Ctrl`+`Shift`+`I`) and switch to the
+   **Network** tab.
+3. Filter the request list by `spot` - the request called **`spot-solution`** is the one
+   that carries the solution.
+4. Click it, open the **Response** tab, copy the whole JSON, paste it into the converter
+   and press **Convert**.
+
+An empty list just means DevTools was opened after the request had happened: leave it
+open and reload the page (or reopen the spot) and `spot-solution` shows up again. A real
+response is around 200 KB, and the field that makes it recognisable is `action_solutions`.
+
 ## Why there is no backend
 
 The whole converter is JavaScript under `js/lib` - no dependencies, no build

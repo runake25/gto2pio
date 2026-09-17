@@ -398,6 +398,14 @@ input[type="number"] { width: 76px; padding: 4px 6px; }
 @media (max-width: 640px) { .tut-options { grid-template-columns: 1fr; gap: 2px 0; } }
 .tut-notes { margin: 0 0 12px; padding-left: 20px; color: var(--muted); }
 .tut-notes li { margin: 0 0 6px; font-size: 13px; }
+.tut-note {
+  display: block;
+  margin-top: 6px;
+  padding-left: 11px;
+  border-left: 2px solid var(--line);
+  color: var(--muted);
+  font-size: 12.5px;
+}
 .tut-edit {
   margin: 24px 0 0;
   padding-top: 14px;

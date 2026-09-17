@@ -10,7 +10,7 @@
 (function (root) {
   const GTO2PIO = (root.GTO2PIO = root.GTO2PIO || {});
 
-  GTO2PIO.VERSION = "0.3.4";
+  GTO2PIO.VERSION = "0.3.5";
 
   Object.assign(GTO2PIO, {
     // hands

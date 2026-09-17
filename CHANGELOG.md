@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.5 - 2026-09-17
+
+* **How to use tab written out.** Three numbered sections: getting the payload out of
+  GTO Wizard (open the spot, DevTools, **Network**, filter by `spot`, open the
+  `spot-solution` request's response and copy the JSON), pasting it and converting, and
+  picking the actions to copy - each with the gotchas as small notes next to the step.
+* Assets moved to `?v=0.3.5`.
+
 ## 0.3.4 - 2026-09-17
 
 * **Fixed: the weights.** GTO Wizard's strategy arrays are relative to the combos a
