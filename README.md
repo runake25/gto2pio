@@ -7,7 +7,8 @@
 **Use it here: <https://runake25.github.io/gto2pio/>**
 
 Paste a **GTO Wizard solution JSON**, tick the actions you want to keep
-(raise + call by default), and copy a ready-to-paste **PioSOLVER range string**:
+(everything except fold is ticked by default), and copy a ready-to-paste
+**PioSOLVER range string**:
 
 ```
 AA,KK,QQ:0.45,JJ:0.45,TT:0.45,99:0.45,88,77,66,55,44,33,22,AK,AQ,AJ,AT,A9:0.45,...
@@ -24,25 +25,29 @@ it means you can save the files and use the tool offline as well.
 
 ## What it does
 
-* **Auto-detects seven payload shapes** instead of demanding one exact layout -
+* **Auto-detects eight payload shapes** instead of demanding one exact layout -
   including the real GTO Wizard `/solution/` response with 169-element
-  `strategy` arrays (see [Supported payloads](#supported-payloads)).
+  `strategy` arrays and its aggregated per-hand `actions_total_combos` report
+  (see [Supported payloads](#supported-payloads)).
 * **Gets the hand axis right.** GTO Wizard's strategy arrays are not in the order
   the 169-hand grid is usually drawn in, so the axis is read from the payload
   itself (`players_info[].simple_hand_counters`) and then **cross-checked against
   the payload's own `total_combos`**. When the numbers disagree you get an
   explicit warning instead of a silently wrong range.
-* **Pick exactly what goes into the range**: fold / check / call / bet / raise /
-  all-in, with raise sizes merged or kept separate and all-in counted as a raise
-  or as its own action.
+* **Every action stays separate.** `F`, `C`, `R2.5`, `R31.5`, `RAI` each get
+  their own tick box, colour, share and range text. Nothing is merged behind your
+  back, so an all-in can never hide inside \"raise\", and a 31.5 raise never mixes
+  with a 2.5 raise.
 * **Output controls**: decimals (0-6), minimum weight, suited+offsuit merging on
   equal weights (`AK` instead of `AKs,AKo`), and a 0-1 vs 0-100 frequency scale
-  override.
-* **Feedback you can trust**: combo count and % of all 1326 combos shown as
-  chips, a 13x13 weighted grid, a range per action, and a 13x13 preview. When
-  something could not be confirmed (for example a hand axis that does not match
-  the payload's own combo counts) you get an amber warning next to the **Convert**
-  button instead of a silently wrong range - the details are in the Inspector.
+  override. Every option has a `?` badge next to it - hover it (or tab to it) for
+  what it does and a concrete example.
+* **Feedback you can trust**: combo count and % of all 1326 combos as chips, a
+  13x13 grid where each cell is **sliced into the action colours in their real
+  proportions** (what GTO Wizard's own grid does), a colour legend, one range per
+  action, and an inspector. When something could not be confirmed (for example a
+  hand axis that does not match the payload's own combo counts) you get an amber
+  warning next to the **Convert** button instead of a silently wrong range.
 
 ## Supported payloads
 
@@ -55,6 +60,13 @@ it means you can save the files and use the tool offline as well.
 | 5 | one record per hand | `[{"hand": "AA", "actions": [{"action": "R", "frequency": 0.6}]}]` |
 | 6 | one object per action | `[{"action": {"code": "R"}, "strategy": {"AA": 0.5, "KK": 1.0}}]` |
 | 7 | single weight per hand (no action axis) | `{"AA": 0.5, "KK": 1.0}` |
+| 8 | GTO Wizard aggregated report (combos per action) | `{"53o": {"name": "53o", "total_combos_available": 12, "actions_total_combos": {"F": 12, "C": 0, "R31.5": 0, "RAI": 0}}}` |
+
+Shape 8 lists how many **combos** take each action instead of a frequency, so the
+combos are divided by `total_combos_available` - the same denominator GTO Wizard
+uses for its own `total_frequency`. Every key becomes its own action (`F`, `C`,
+`R31.5`, `RAI`), and because the aggregated report is a *summary*, it is only used
+when the payload carries no real per-action solution block.
 
 Frequencies may be numbers, numeric strings (`"45"`, `"45%"`) or
 `{"frequency": 0.5}` objects. Combo-level payloads (`AhAd`) are averaged into
@@ -80,6 +92,13 @@ Deploy from a branch &rarr; `main` / `/ (root)`**. There is no build step, so th
 site is live within a minute and every commit redeploys it. Jekyll processing is
 off (`.nojekyll`).
 
+GitHub Pages serves these files with a 10 minute cache. Because the page and its
+scripts are cached separately, a visitor can end up running a script from the
+version they loaded earlier against a newer page - so **bump the `?v=` query on
+every asset in `index.html` when you release** (and bump `GTO2PIO.VERSION` with
+it). The page also detects that mismatch, puts a red banner at the top and tells
+the visitor to hard-refresh instead of failing with a JavaScript error.
+
 ## Files
 
 ```
@@ -89,12 +108,13 @@ js/lib/               the converter (no DOM in here)
   hands.js              the 169 hand classes, combo counts, canonicalisation
   actions.js            action codes and words -> families and labels
   pio.js                Pio range emission and combo statistics
-  schema.js             detection of a pasted payload (the seven shapes)
+  schema.js             detection of a pasted payload (the eight shapes)
   parser.js             analyze(): detected strategy -> ready-to-use result
   gto2pio.js            the public API (GTO2PIO.analyze, GTO2PIO.VERSION, ...)
 js/ui/                the page, one file per concern
   dom.js                element lookups, UI state, status/error feedback
-  render.js             drawing a result: actions, range, chips, grid, panels
+  colors.js             the action palette, shared by picker, grid and legend
+  render.js             drawing a result: actions, range, chips, sliced grid
   files.js              copy/download, samples, the file input
   main.js               analyze() wiring, presets, disclosures, init()
 css/style.css         styling (no framework, dark by default)
@@ -115,8 +135,10 @@ namespace, so the load order in `index.html` is the only wiring this site needs.
   because this repository is deliberately just the deployable site.
 * A headless-browser smoke test drives the page the way a user does: paste a
   169-hand payload, click **Convert**, then assert the range, the stats chips, the
-  169-cell grid, the per-action panels, the empty-box and unrecognised-payload
-  error paths, and that no JavaScript error was logged.
+  169-cell grid, the coloured slices, the colour legend and swatches, the five
+  option tips, the per-action panels, an aggregated `actions_total_combos`
+  payload (checking that `R31.5` and `RAI` stay separate actions), the empty-box
+  and unrecognised-payload error paths, and that no JavaScript error was logged.
 * CI (`.github/workflows/check.yml`) syntax-checks both scripts and converts the
   shipped sample in Node on every push.
 

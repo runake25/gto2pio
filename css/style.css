@@ -182,7 +182,8 @@ input[type="number"] { width: 76px; padding: 4px 6px; }
 }
 .action-row:hover { border-color: var(--accent); }
 .action-row input { accent-color: var(--accent); }
-.action-row .name { flex: 1; }
+.action-row .name { flex: 1; font-weight: 600; }
+.action-row .codes { color: var(--muted); font: 11.5px var(--mono); }
 .action-row .share { color: var(--muted); font: 12px var(--mono); }
 .action-sub { margin: 0 0 0 26px; color: var(--muted); font: 11.5px var(--mono); }
 
@@ -195,6 +196,58 @@ input[type="number"] { width: 76px; padding: 4px 6px; }
   color: var(--muted);
 }
 .chip b { color: var(--text); font-weight: 600; }
+
+/* the action colour key: same colours as the picker and the grid */
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex: none;
+  border: 1px solid rgba(255, 255, 255, .2);
+}
+.swatch.small { width: 10px; height: 10px; border-radius: 2px; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 8px; }
+.legend-item { display: inline-flex; align-items: center; font: 11.5px var(--mono); color: var(--muted); }
+
+/* "?" badges: hover or tab to them for what an option actually does */
+.tip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--muted);
+  font: 11px var(--mono);
+  cursor: help;
+}
+.tip:hover, .tip:focus { color: var(--text); border-color: var(--accent); }
+.tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: 150%;
+  left: 0;
+  z-index: 30;
+  width: max-content;
+  max-width: 290px;
+  background: #0d1117;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: 12px/1.45 "Segoe UI", system-ui, sans-serif;
+  white-space: normal;
+  text-align: left;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .5);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .12s;
+  pointer-events: none;
+}
+.tip:hover::after, .tip:focus::after { opacity: 1; visibility: visible; }
 
 .disclosure {
   width: 100%;
@@ -228,17 +281,38 @@ input[type="number"] { width: 76px; padding: 4px 6px; }
   min-width: 520px;
 }
 .cell {
+  position: relative;
   aspect-ratio: 1 / 1;
   border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #202836;
+  border: 1px solid #2b3442;
+}
+/* one vertical slice per selected action: heights are that hand's frequencies */
+.cell .slice { flex: 1 1 0; min-height: 0; }
+.cell .hand {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font: 11px var(--mono);
-  background: #202836;
-  color: var(--muted);
-  border: 1px solid #2b3442;
+  font: 10px var(--mono);
+  color: #f2f6fa;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .9), 0 0 3px rgba(0, 0, 0, .75);
+  pointer-events: none;
 }
-.cell.on { color: #f0f6fc; }
+.cell.on { border-color: #39445a; }
+
+/* shown when a cached script does not match the page it is running on */
+.stale-banner {
+  background: #2a1618;
+  color: #ffd7d5;
+  border-bottom: 1px solid var(--bad);
+  padding: 10px 20px;
+  font-size: 12.5px;
+}
 
 .footer {
   display: flex;

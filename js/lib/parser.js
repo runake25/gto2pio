@@ -243,8 +243,11 @@
     const rangeText = formatPioRange(merged, formatOptions);
 
     const perGroup = emptyMap();
+    const groupGrids = emptyMap();
     for (const groupId of order) {
       const mapping = grouped[groupId] || {};
+      // per-action weights per hand: the grid draws one coloured slice per action
+      groupGrids[groupId] = buildGrid(mapping);
       perGroup[groupId] = {
         label: groupLabel(groupId, options),
         range_text: formatPioRange(mapping, formatOptions),
@@ -292,6 +295,8 @@
         included_share: stats.percent,
       },
       per_group: perGroup,
+      // one {hand: weight} map per action: the coloured grid is built from these
+      group_grids: groupGrids,
       grid: buildGrid(merged),
       detection: {
         format_id: detection.formatId,

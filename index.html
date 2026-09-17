@@ -6,7 +6,9 @@
   <title>GTO Wizard &rarr; PioSOLVER range converter</title>
   <meta name="description" content="Paste a GTO Wizard solution JSON and get a ready-to-use PioSOLVER range string. Runs entirely in your browser - no upload, no server.">
   <link rel="icon" href="assets/favicon.ico">
-  <link rel="stylesheet" href="css/style.css">
+  <!-- Bump the ?v= on every asset when releasing: browsers cache these files for
+       10 minutes, and a cached script paired with a newer page is what breaks. -->
+  <link rel="stylesheet" href="css/style.css?v=0.3.3">
 </head>
 <body>
   <header class="topbar">
@@ -44,15 +46,19 @@
       <details class="options" open>
         <summary>2 &middot; Options</summary>
         <div class="option-grid">
-          <label><input type="checkbox" id="opt-merge" checked> Merge raise/bet/all-in sizes</label>
-          <label><input type="checkbox" id="opt-allin" checked> Treat all-in as raise</label>
-          <label><input type="checkbox" id="opt-combine" checked> Merge suited+offsuit on equal weight</label>
-          <label><input type="checkbox" id="opt-combos" checked> Average per-combo data</label>
+          <label><input type="checkbox" id="opt-combine" checked> Merge suited+offsuit on equal weight
+            <span class="tip" tabindex="0" data-tip="AKs and AKo both at 50% are written as one entry - AK:0.5. Turn it off to keep AQs and AQo apart as separate entries.">?</span>
+          </label>
+          <label><input type="checkbox" id="opt-combos" checked> Average per-combo data
+            <span class="tip" tabindex="0" data-tip="When the payload lists single combos (AcKd, AhKs, ...) their weights are averaged into one AK entry. Off keeps every combo, which makes the range much longer and much more detailed.">?</span>
+          </label>
           <label class="num">Decimals
             <input type="number" id="opt-decimals" min="0" max="6" step="1" value="2">
+            <span class="tip" tabindex="0" data-tip="Decimals kept on the weights. 2 gives AA:0.33; 0 gives plain AA for a weight of 1 and rounds everything lighter away (the shortest range).">?</span>
           </label>
           <label class="num">Min weight
             <input type="number" id="opt-min-weight" min="0" max="1" step="0.01" value="0">
+            <span class="tip" tabindex="0" data-tip="Drops hands under this frequency: 0.05 hides anything below 5%, so hands that are only played a little disappear from the range instead of showing up as noise.">?</span>
           </label>
           <label class="num">Scale
             <select id="opt-scale">
@@ -60,6 +66,7 @@
               <option value="fraction">0-1 fraction</option>
               <option value="percent">0-100 percent</option>
             </select>
+            <span class="tip" tabindex="0" data-tip="How to read the numbers in the payload. auto guesses (values above 1 are read as percentages), fraction uses 0-1 as-is, percent always divides by 100.">?</span>
           </label>
         </div>
       </details>
@@ -81,7 +88,7 @@
           </div>
         </div>
         <p class="hint" id="detected-hint"></p>
-        <p class="muted" id="actions-placeholder">Convert once and the actions found in your payload show up here - tick the ones the range should contain.</p>
+        <p class="muted" id="actions-placeholder">Convert once and the actions found in your payload show up here, each in its own colour - tick the ones the range should contain. The same colours are used by the 13&times;13 grid.</p>
         <div id="action-list" class="action-list"></div>
       </div>
     </section>
@@ -128,17 +135,18 @@
   </footer>
 
   <!-- the converter: plain scripts, so this order is the dependency order -->
-  <script src="js/lib/common.js"></script>
-  <script src="js/lib/hands.js"></script>
-  <script src="js/lib/actions.js"></script>
-  <script src="js/lib/pio.js"></script>
-  <script src="js/lib/schema.js"></script>
-  <script src="js/lib/parser.js"></script>
-  <script src="js/lib/gto2pio.js"></script>
-  <!-- the page: dom -> render -> files -> main -->
-  <script src="js/ui/dom.js"></script>
-  <script src="js/ui/render.js"></script>
-  <script src="js/ui/files.js"></script>
-  <script src="js/ui/main.js"></script>
+  <script src="js/lib/common.js?v=0.3.3"></script>
+  <script src="js/lib/hands.js?v=0.3.3"></script>
+  <script src="js/lib/actions.js?v=0.3.3"></script>
+  <script src="js/lib/pio.js?v=0.3.3"></script>
+  <script src="js/lib/schema.js?v=0.3.3"></script>
+  <script src="js/lib/parser.js?v=0.3.3"></script>
+  <script src="js/lib/gto2pio.js?v=0.3.3"></script>
+  <!-- the page: dom -> colors -> render -> files -> main -->
+  <script src="js/ui/dom.js?v=0.3.3"></script>
+  <script src="js/ui/colors.js?v=0.3.3"></script>
+  <script src="js/ui/render.js?v=0.3.3"></script>
+  <script src="js/ui/files.js?v=0.3.3"></script>
+  <script src="js/ui/main.js?v=0.3.3"></script>
 </body>
 </html>

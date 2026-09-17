@@ -10,7 +10,7 @@
 (function (root) {
   const GTO2PIO = (root.GTO2PIO = root.GTO2PIO || {});
 
-  GTO2PIO.VERSION = "0.3.2";
+  GTO2PIO.VERSION = "0.3.3";
 
   Object.assign(GTO2PIO, {
     // hands
@@ -27,6 +27,7 @@
     // actions
     normalizeAction: GTO2PIO.actions.normalizeAction,
     actionLabel: GTO2PIO.actions.actionLabel,
+    actionCode: GTO2PIO.actions.actionCode,
     labelForId: GTO2PIO.actions.labelForId,
     // pio
     formatPioRange: GTO2PIO.pio.formatPioRange,

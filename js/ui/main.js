@@ -10,6 +10,17 @@
   const UI = GTO2PIO.ui || (GTO2PIO.ui = {});
 
 function analyze({ resetSelection = false } = {}) {
+  if (!UI.dom.ready()) {
+    // a script cached from an older release is running against this page
+    UI.dom.showStaleBanner();
+    UI.dom.setStatus("old script cached", "err");
+    UI.dom.setInlineStatus(
+      "This page loaded a script from an older version. Press Ctrl+Shift+R " +
+        "(Cmd+Shift+R on macOS) and convert again.",
+      "err"
+    );
+    return;
+  }
   const text = UI.dom.el.json.value;
   if (!text.trim()) {
     UI.dom.showError("The JSON box is empty - paste a GTO Wizard payload first.");
@@ -105,22 +116,36 @@ function presetNone() {
 }
 
 function bindToggle(buttonId, box) {
-  UI.dom.$(buttonId).addEventListener("click", () => {
+  const button = UI.dom.$(buttonId);
+  if (!button || !box) return;
+  button.addEventListener("click", () => {
     box.hidden = !box.hidden;
   });
 }
 
+/* Bindings that tolerate a missing element (a cached page can lack ids). */
+function onClick(id, handler) {
+  const node = UI.dom.$(id);
+  if (node) node.addEventListener("click", handler);
+}
+
+function onChange(id, handler) {
+  const node = UI.dom.$(id);
+  if (node) node.addEventListener("change", handler);
+}
+
 function clearAll() {
-  UI.dom.el.json.value = "";
-  UI.dom.el.range.value = "";
-  UI.dom.el.actions.innerHTML = "";
-  UI.dom.el.placeholder.hidden = false;
-  UI.dom.el.chips.innerHTML = "";
-  UI.dom.el.gridBox.innerHTML = "";
-  UI.dom.el.perGroupBox.innerHTML = "";
-  UI.dom.el.inspect.textContent = "";
-  UI.dom.el.hint.textContent = "";
-  UI.dom.el.sampleSelect.value = "";
+  const el = UI.dom.el;
+  if (el.json) el.json.value = "";
+  if (el.range) el.range.value = "";
+  if (el.actions) el.actions.innerHTML = "";
+  if (el.placeholder) el.placeholder.hidden = false;
+  if (el.chips) el.chips.innerHTML = "";
+  if (el.gridBox) el.gridBox.innerHTML = "";
+  if (el.perGroupBox) el.perGroupBox.innerHTML = "";
+  if (el.inspect) el.inspect.textContent = "";
+  if (el.hint) el.hint.textContent = "";
+  if (el.sampleSelect) el.sampleSelect.value = "";
   UI.dom.state.result = null;
   UI.dom.state.include = null;
   UI.dom.clearError();
@@ -138,26 +163,28 @@ function init() {
     return;
   }
   if (UI.dom.$("version")) UI.dom.$("version").textContent = "v" + GTO2PIO.VERSION;
+  // a page whose scripts came from an older release: say so instead of breaking
+  if (!UI.dom.ready()) UI.dom.showStaleBanner();
 
-  UI.dom.$("analyze-btn").addEventListener("click", () => analyze({ resetSelection: true }));
-  UI.dom.$("example-btn").addEventListener("click", UI.files.loadExample);
-  UI.dom.$("copy-btn").addEventListener("click", UI.files.copyRange);
-  UI.dom.$("download-btn").addEventListener("click", UI.files.downloadRange);
-  UI.dom.$("preset-raisecall").addEventListener("click", presetRaiseCall);
-  UI.dom.$("preset-all").addEventListener("click", presetAll);
-  UI.dom.$("preset-none").addEventListener("click", presetNone);
-  UI.dom.$("clear-btn").addEventListener("click", clearAll);
+  onClick("analyze-btn", () => analyze({ resetSelection: true }));
+  onClick("example-btn", UI.files.loadExample);
+  onClick("copy-btn", UI.files.copyRange);
+  onClick("download-btn", UI.files.downloadRange);
+  onClick("preset-raisecall", presetRaiseCall);
+  onClick("preset-all", presetAll);
+  onClick("preset-none", presetNone);
+  onClick("clear-btn", clearAll);
 
-  UI.dom.el.sampleSelect.addEventListener("change", (event) => {
+  onChange("sample-select", (event) => {
     if (event.target.value) UI.files.loadSample(event.target.value);
   });
 
-  UI.dom.$("file-input").addEventListener("change", (event) => {
+  onChange("file-input", (event) => {
     const file = event.target.files[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      UI.dom.el.json.value = String(reader.result);
+      if (UI.dom.el.json) UI.dom.el.json.value = String(reader.result);
       analyze({ resetSelection: true });
     };
     reader.onerror = () => UI.dom.showError("Could not read " + file.name);
@@ -165,23 +192,26 @@ function init() {
     event.target.value = "";
   });
 
-  ["opt-merge", "opt-allin", "opt-combine", "opt-combos", "opt-scale",
-   "opt-decimals", "opt-min-weight"].forEach((id) => {
-    UI.dom.$(id).addEventListener("change", () => {
-      if (UI.dom.el.json.value.trim()) analyze({ resetSelection: true });
+  // every option re-runs the conversion, so tweaking stays immediate
+  ["opt-combine", "opt-combos", "opt-scale", "opt-decimals", "opt-min-weight"]
+    .forEach((id) => {
+      onChange(id, () => {
+        if (UI.dom.el.json.value.trim()) analyze({ resetSelection: true });
+      });
     });
-  });
 
-  UI.dom.el.json.addEventListener("keydown", (event) => {
-    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-      event.preventDefault();
-      analyze({ resetSelection: true });
-    }
-  });
+  if (UI.dom.el.json) {
+    UI.dom.el.json.addEventListener("keydown", (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+        event.preventDefault();
+        analyze({ resetSelection: true });
+      }
+    });
+  }
 
   bindToggle("grid-toggle", UI.dom.el.gridBox);
   bindToggle("per-group-toggle", UI.dom.el.perGroupBox);
-  UI.dom.$("inspect-toggle").addEventListener("click", () => {
+  onClick("inspect-toggle", () => {
     UI.dom.el.inspect.hidden = !UI.dom.el.inspect.hidden;
   });
 

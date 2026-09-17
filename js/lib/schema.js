@@ -648,6 +648,156 @@
     "weights", "frequencies_list", "action_frequencies",
   ];
 
+  /* GTO Wizard's aggregated report lists combos per action instead of
+   * frequencies:
+   *
+   *   "53o": {
+   *     "name": "53o",
+   *     "total_combos_available": 12.0, "total_combos": 12.0, "total_frequency": 1.0,
+   *     "actions_total_combos": {"F": 12.0, "C": 0.0, "R31.5": 0.0, "RAI": 0.0}
+   *   }
+   *
+   * One key per available action, no merging: 53o here folds 100%, and the
+   * other three actions stay as separate entries with a frequency of 0.
+   * The combos are divided by total_combos_available - the same denominator
+   * GTO Wizard uses for its own total_frequency.
+   */
+  const RECORD_COMBOS_KEYS = [
+    "actions_total_combos", "action_total_combos", "actions_total_combo",
+    "action_combos", "actions_combos", "combos_by_action", "total_combos_by_action",
+  ];
+
+  const RECORD_AVAILABLE_KEYS = [
+    "total_combos_available", "total_combo_available", "combos_available",
+    "available_combos", "total_combos",
+  ];
+
+  /* The {action: combos} dict of one per-hand record, or null. */
+  function actionComboEntries(record) {
+    for (const key of RECORD_COMBOS_KEYS) {
+      const value = lookupKey(record, [key]);
+      if (!isPlainObject(value)) continue;
+      const entries = [];
+      for (const actionKey of Object.keys(value)) {
+        const number = toNumber(value[actionKey]);
+        if (number !== null) entries.push([String(actionKey), number]);
+      }
+      if (entries.length) return entries;
+    }
+    return null;
+  }
+
+  /* [handToken, record] pairs for the containers that can hold such records. */
+  function actionComboRows(item) {
+    const rows = [];
+    if (item.kind === "hand_records") {
+      for (const record of item.node) {
+        if (isPlainObject(record)) rows.push([recordHandToken(record)[1], record]);
+      }
+      return rows;
+    }
+    if (item.kind === "hand_dict_map") {
+      for (const key of Object.keys(item.node)) {
+        const record = item.node[key];
+        if (!isPlainObject(record)) continue;
+        const token = recordHandToken(record)[1];
+        rows.push([token !== null ? token : (isHandToken(key) ? key : null), record]);
+      }
+    }
+    return rows;
+  }
+
+  /* {"53o": {"actions_total_combos": {...}}} layouts. */
+  function fromActionComboRecords(found) {
+    const candidates = [];
+    for (const item of found) {
+      const rows = actionComboRows(item);
+      if (!rows.length) continue;
+
+      const order = [];
+      const seen = new Set();
+      const perHand = {};
+      let used = 0;
+      let renormalised = 0;
+
+      for (const [hand, record] of rows) {
+        if (hand === null) continue;
+        const entries = actionComboEntries(record);
+        if (entries === null) continue;
+        used += 1;
+
+        let available = null;
+        for (const key of RECORD_AVAILABLE_KEYS) {
+          const number = toNumber(lookupKey(record, [key]));
+          if (number !== null && number > 0) {
+            available = number;
+            break;
+          }
+        }
+        let total = 0;
+        for (const entry of entries) total += entry[1];
+        if (available === null) available = total;
+        if (available <= 0) available = 1;
+        if (total > available + 1e-9) {
+          // inconsistent: more combos than the record admits to having
+          available = total;
+          renormalised += 1;
+        }
+
+        if (!perHand[hand]) perHand[hand] = {};
+        const row = perHand[hand];
+        for (const entry of entries) {
+          const actionKey = entry[0];
+          if (!seen.has(actionKey)) {
+            seen.add(actionKey);
+            order.push(actionKey);
+          }
+          const frequency = Math.max(0.0, Math.min(entry[1] / available, 1.0));
+          if (frequency > 0) row[actionKey] = (row[actionKey] || 0.0) + frequency;
+        }
+      }
+
+      if (!order.length || !Object.keys(perHand).length) continue;
+
+      const actions = order.map((key) => {
+        const info = normalizeAction(key);
+        if (info === null) {
+          return { id: String(key), family: "unknown", name: String(key), betsize: null, raw: "" };
+        }
+        // keep the payload's own code (F, C, R31.5, RAI) as the label
+        return Object.assign({}, info, { name: String(key) });
+      });
+
+      const columns = order.map((key, index) => {
+        const mapping = {};
+        for (const hand of Object.keys(perHand)) {
+          const value = perHand[hand][key];
+          if (value !== undefined && value > 0) mapping[hand] = value;
+        }
+        return [actions[index], mapping];
+      });
+
+      const notes = [
+        `action combos per hand: ${Object.keys(perHand).length} hands x ${order.length} actions ` +
+          `at ${item.path} (${used} rows)`,
+        "combos divided by total_combos_available, GTO Wizard's own denominator",
+      ];
+      if (renormalised) {
+        notes.push(`${renormalised} row(s) listed more combos than available - divided by their own sum`);
+      }
+
+      candidates.push({
+        kind: "gw_action_combos",
+        label: "GTO Wizard report (combos per action)",
+        columns,
+        score: scoreColumns(columns, actions.every((action) => action.family !== "unknown"),
+          Object.keys(perHand).length),
+        notes,
+      });
+    }
+    return candidates;
+  }
+
   function anyGlobalActions(found) {
     for (const item of found) {
       if (item.kind !== "action_list") continue;
@@ -896,6 +1046,14 @@
     ]) {
       for (const candidate of detector(found)) candidates.push(candidate);
     }
+    /* The aggregated combos report is a summary of a solution that was already
+     * solved elsewhere, so it only gets a say when nothing better (a real
+     * per-action solution) was recognised. That also keeps the payloads the
+     * python reference handles on their original path. */
+    const CONFIDENT = 70.0;
+    if (!candidates.some((candidate) => candidate.score >= CONFIDENT)) {
+      for (const candidate of fromActionComboRecords(found)) candidates.push(candidate);
+    }
     if (!candidates.length) {
       for (const candidate of fromHandNumMaps(found)) candidates.push(candidate);
     }
@@ -1022,6 +1180,11 @@
     fromHandListMaps,
     fromHandDictMaps,
     RECORD_CONTAINER_KEYS,
+    RECORD_COMBOS_KEYS,
+    RECORD_AVAILABLE_KEYS,
+    actionComboEntries,
+    actionComboRows,
+    fromActionComboRecords,
     anyGlobalActions,
     recordEntries,
     fromHandRecords,

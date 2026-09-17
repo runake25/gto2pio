@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.3.3 - 2026-09-17
+
+* **No more merging.** The "Merge raise/bet/all-in sizes" and "Treat all-in as
+  raise" options are gone: every action in the payload is now its own group, so
+  `F`, `C`, `R2.5`, `R31.5` and `RAI` are listed, ticked and converted separately.
+* **New payload shape**: GTO Wizard's aggregated report
+  (`actions_total_combos` per hand) is converted by dividing the combos by
+  `total_combos_available`, with one action per key. It is only used when the
+  payload has no proper per-action solution block, so real `/solution/` payloads
+  keep their existing (python-verified) path.
+* **Coloured grid.** The 13x13 grid now draws one vertical slice per selected
+  action - heights are that hand's real frequency split, and the colours match
+  the picker: F slate, C green, raise sizes on an amber-to-rose ramp, all-in
+  purple. A legend above the grid shows the colour key, and the per-action ranges
+  carry their colour as well.
+* **Tips everywhere.** Every remaining option has a `?` badge explaining what it
+  does with a concrete example (hover or tab to it).
+* **Stale-cache fix.** Assets now carry a `?v=` query, the page detects a script
+  that does not match the page it is running on and shows a red "hard refresh"
+  banner, and the renderers no longer write into elements that are not there.
+  This is what produced `TypeError: Cannot set properties of null (setting
+  'innerHTML')` after the last release, for visitors holding a cached script.
+* Version badge reports 0.3.3.
+
 ## 0.3.2 - 2026-09-17
 
 * **Layout:** everything that *configures* the conversion now lives in the left

@@ -54,5 +54,18 @@ jobs:
           }
           if (!threw) fail("an unrecognised payload should raise ParseError with diagnostics");
 
+          // the aggregated report: F / C / R31.5 / RAI stay separate actions
+          const aggregated = core.analyze(JSON.stringify({ hands: {
+            "53o": { name: "53o", total_combos_available: 12, total_combos: 12, total_frequency: 1,
+                     actions_total_combos: { F: 12, C: 0, "R31.5": 0, RAI: 0 } },
+            "AKs": { name: "AKs", total_combos_available: 8, total_combos: 8, total_frequency: 1,
+                     actions_total_combos: { F: 0, C: 2, "R31.5": 6, RAI: 0 } }
+          }}), { merge_sizes: false, allin_as_raise: false });
+          same(aggregated.detection.format_id, "gw_action_combos", "aggregated combos format");
+          same(aggregated.groups.map((group) => group.label).join(","),
+            "Fold,Call,Raise 31.5,All-in", "one action per payload key");
+          same(aggregated.group_grids["raise:31.5"].AKs, 0.75, "AKs raises 31.5 for 75% of its combos");
+          same(aggregated.range_text, "AKs", "only the non-fold actions end up in the range");
+
           console.log("the converter converts the shipped sample correctly")
           JS

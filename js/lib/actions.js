@@ -24,6 +24,11 @@
     bet: "Bet", raise: "Raise", allin: "All-in",
   };
 
+  /* GTO Wizard's own short codes - the letters the reports show. */
+  const FAMILY_CODES = {
+    fold: "F", check: "X", call: "C", bet: "B", raise: "R", allin: "RAI",
+  };
+
   const NUMBER_RE = /-?\d+(?:\.\d+)?/;
 
   const ACTION_KEYS = ["action", "code", "type", "name", "label", "action_type", "actiontype"];
@@ -159,15 +164,38 @@
     return sizeText ? `${base} ${sizeText}` : base;
   }
 
+  /* Short code for an action: the payload's own name when it has one
+   * ("R31.5"), otherwise family letter + size ("R31.5", "RAI", "F").
+   * Works both for real actions and for the lighter group members in results. */
+  function actionCode(action) {
+    const info = action || {};
+    if (info.name) return String(info.name);
+    const code = FAMILY_CODES[info.family];
+    if (code === undefined) return "";
+    let size = info.betsize;
+    if (size === null || size === undefined) {
+      const text = String(info.id === undefined ? "" : info.id);
+      const cut = text.indexOf(":");
+      if (cut >= 0) {
+        const parsed = Number(text.slice(cut + 1));
+        if (Number.isFinite(parsed)) size = parsed;
+      }
+    }
+    if (size === null || size === undefined) return code;
+    return code + formatG(size);
+  }
+
 
   GTO2PIO.actions = {
     FAMILY_ALIASES,
     FAMILY_LABELS,
+    FAMILY_CODES,
     NUMBER_RE,
     ACTION_KEYS,
     SIZE_KEYS,
     POSITION_KEYS,
     actionLabel,
+    actionCode,
     coerceSize,
     familyFromText,
     makeId,
