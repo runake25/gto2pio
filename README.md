@@ -34,6 +34,8 @@ there is no server to go down or to pay for.
 An empty list just means DevTools was opened after the request had happened: leave it
 open and reload the page (or reopen the spot) and `spot-solution` shows up again. A real
 response is around 200 KB, and the field that makes it recognisable is `action_solutions`.
+The **How to use** tab of the site shows the same flow with an annotated screenshot of the
+Network tab.
 
 ## Why there is no backend
 

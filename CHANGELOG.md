@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.7 - 2026-09-17
+
+* **The "check if it is open" button is gone** - a page cannot open DevTools, so the
+  button could only repeat the instructions. In its place step 2 now shows an
+  **annotated screenshot of the Network tab** (`assets/network-tab.png`, 767x622): amber
+  rings and numbered pins on the three things to click - the **Network** tab, the filter
+  box with `spot`, and the `spot-solution` request row - with a caption that matches the
+  numbers.
+* Assets moved to `?v=0.3.7`.
+
 ## 0.3.6 - 2026-09-17
 
 * **How to use is now four plain steps** ("open your spot", "open the Network tab",

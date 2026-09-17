@@ -8,7 +8,7 @@
   <link rel="icon" href="assets/favicon.ico">
   <!-- Bump the ?v= on every asset when releasing: browsers cache these files for
        10 minutes, and a cached script paired with a newer page is what breaks. -->
-  <link rel="stylesheet" href="css/style.css?v=0.3.6">
+  <link rel="stylesheet" href="css/style.css?v=0.3.7">
 </head>
 <body>
   <header class="topbar">
@@ -155,8 +155,20 @@ No payload at hand? Press &quot;Load GTO Wizard sample&quot; (needs a web server
           <kbd>&#8984;</kbd>+<kbd>&#8997;</kbd>+<kbd>I</kbd>), then click
           <strong>Network</strong> at the top of the panel that appeared. Nothing happened?
           Right-click the page &rarr; <strong>Inspect</strong>.
-          <button type="button" class="devtools-btn" id="devtools-btn">Check if it is open</button>
-          <span class="devtools-hint" id="devtools-hint" hidden></span>
+          <figure class="shot">
+            <img src="assets/network-tab.png" alt="Chrome DevTools, Network tab, filtered by spot: the spot-solution request is listed with status 200" width="767" height="622" loading="lazy">
+            <span class="ring ring-network"></span>
+            <span class="ring ring-filter"></span>
+            <span class="ring ring-row"></span>
+            <span class="pin pin-1" aria-hidden="true">1</span>
+            <span class="pin pin-2" aria-hidden="true">2</span>
+            <span class="pin pin-3" aria-hidden="true">3</span>
+            <figcaption>
+              <strong>1</strong> Click <strong>Network</strong> &middot;
+              <strong>2</strong> type <code>spot</code> in the filter box &middot;
+              <strong>3</strong> click <code>spot-solution</code>, then open <strong>Response</strong>
+            </figcaption>
+          </figure>
           <span class="tut-note">
             New to this? See the official pages:
             <a class="tut-link" href="https://developer.chrome.com/docs/devtools/open" target="_blank" rel="noopener noreferrer">how to open DevTools</a>
@@ -210,18 +222,18 @@ No payload at hand? Press &quot;Load GTO Wizard sample&quot; (needs a web server
   </footer>
 
   <!-- the converter: plain scripts, so this order is the dependency order -->
-  <script src="js/lib/common.js?v=0.3.6"></script>
-  <script src="js/lib/hands.js?v=0.3.6"></script>
-  <script src="js/lib/actions.js?v=0.3.6"></script>
-  <script src="js/lib/pio.js?v=0.3.6"></script>
-  <script src="js/lib/schema.js?v=0.3.6"></script>
-  <script src="js/lib/parser.js?v=0.3.6"></script>
-  <script src="js/lib/gto2pio.js?v=0.3.6"></script>
+  <script src="js/lib/common.js?v=0.3.7"></script>
+  <script src="js/lib/hands.js?v=0.3.7"></script>
+  <script src="js/lib/actions.js?v=0.3.7"></script>
+  <script src="js/lib/pio.js?v=0.3.7"></script>
+  <script src="js/lib/schema.js?v=0.3.7"></script>
+  <script src="js/lib/parser.js?v=0.3.7"></script>
+  <script src="js/lib/gto2pio.js?v=0.3.7"></script>
   <!-- the page: dom -> colors -> render -> files -> main -->
-  <script src="js/ui/dom.js?v=0.3.6"></script>
-  <script src="js/ui/colors.js?v=0.3.6"></script>
-  <script src="js/ui/render.js?v=0.3.6"></script>
-  <script src="js/ui/files.js?v=0.3.6"></script>
-  <script src="js/ui/main.js?v=0.3.6"></script>
+  <script src="js/ui/dom.js?v=0.3.7"></script>
+  <script src="js/ui/colors.js?v=0.3.7"></script>
+  <script src="js/ui/render.js?v=0.3.7"></script>
+  <script src="js/ui/files.js?v=0.3.7"></script>
+  <script src="js/ui/main.js?v=0.3.7"></script>
 </body>
 </html>
