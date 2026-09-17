@@ -38,9 +38,11 @@ it means you can save the files and use the tool offline as well.
 * **Output controls**: decimals (0-6), minimum weight, suited+offsuit merging on
   equal weights (`AK` instead of `AKs,AKo`), and a 0-1 vs 0-100 frequency scale
   override.
-* **Feedback you can trust**: combo count and % of all 1326 combos, a 13x13
-  weighted grid, a range per action, notes/warnings, and an inspector that dumps
-  what was detected when a payload cannot be read.
+* **Feedback you can trust**: combo count and % of all 1326 combos shown as
+  chips, a 13x13 weighted grid, a range per action, and a 13x13 preview. When
+  something could not be confirmed (for example a hand axis that does not match
+  the payload's own combo counts) you get an amber warning next to the **Convert**
+  button instead of a silently wrong range - the details are in the Inspector.
 
 ## Supported payloads
 

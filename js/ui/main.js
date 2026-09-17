@@ -37,13 +37,24 @@ function analyze({ resetSelection = false } = {}) {
       return;
     }
 
-    UI.dom.setStatus("ok - " + data.detection.format_label, "ok");
-    UI.dom.setInlineStatus(
+    const warnings = data.warnings || [];
+    UI.dom.setStatus(
+      warnings.length
+        ? "ok - " + warnings.length + " warning" + (warnings.length === 1 ? "" : "s")
+        : "ok - " + data.detection.format_label,
+      warnings.length ? "warn" : "ok"
+    );
+
+    const summary =
       "Range ready: " + data.detection.hand_count + " hands, selected " +
-        (data.included.join(" + ") || "nothing") + ", " + data.stats.combos +
-        " combos (" + data.stats.percent.toFixed(2) + "% of all combos)." +
-        "\nCopy it from the Pio range box on the right.",
-      "ok"
+      (data.included.join(" + ") || "nothing") + ", " + data.stats.combos +
+      " combos (" + data.stats.percent.toFixed(2) + "% of all combos).";
+    UI.dom.setInlineStatus(
+      warnings.length
+        ? summary + "\nCheck this first: " + warnings.join("  |  ") +
+          "\n(Details in the Inspector under the range.)"
+        : summary + "\nCopy it from the Pio range box on the right.",
+      warnings.length ? "warn" : "ok"
     );
     UI.dom.scrollToOutput();
   } catch (error) {

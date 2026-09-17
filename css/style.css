@@ -47,6 +47,7 @@ body {
   white-space: nowrap;
 }
 .status.ok { color: var(--good); border-color: #1c3a26; }
+.status.warn { color: var(--warn); border-color: #4a3a12; }
 .status.err { color: var(--bad); border-color: #4a2222; }
 
 .topbar-right { display: flex; align-items: center; gap: 8px; }
@@ -61,7 +62,7 @@ body {
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(360px, 1fr) minmax(420px, 1.15fr);
+  grid-template-columns: minmax(380px, 1.05fr) minmax(420px, 1fr);
   gap: 16px;
   padding: 16px 20px 40px;
   align-items: start;
@@ -146,6 +147,7 @@ input[type="number"] { width: 76px; padding: 4px 6px; }
 }
 .inline-status.working { border-color: #35507a; color: #cfe4ff; }
 .inline-status.ok { border-color: #1c3a26; background: #12231a; color: #7ee2a8; }
+.inline-status.warn { border-color: #4a3a12; background: #241f10; color: #f0cd6b; }
 .inline-status.err { border-color: #4a2222; background: #2a1618; color: #ffb4b0; }
 
 .card {
@@ -193,10 +195,6 @@ input[type="number"] { width: 76px; padding: 4px 6px; }
   color: var(--muted);
 }
 .chip b { color: var(--text); font-weight: 600; }
-
-ul { margin: 0; padding-left: 18px; }
-li { font-size: 12.5px; margin: 2px 0; }
-.warnings li { color: var(--warn); }
 
 .disclosure {
   width: 100%;

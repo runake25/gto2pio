@@ -16,10 +16,17 @@ function renderResult(data) {
   renderActions(data);
   UI.dom.el.range.value = data.range_text || "";
   renderChips(data);
-  renderNotes(data);
   renderPerGroup(data);
   renderGrid(data);
-  UI.dom.el.inspect.textContent = JSON.stringify(data.detection, null, 2);
+  // notes and warnings live in the inspector - the panel stays uncluttered
+  UI.dom.el.inspect.textContent = JSON.stringify(
+    Object.assign({}, data.detection, {
+      notes: data.notes || [],
+      warnings: data.warnings || [],
+    }),
+    null,
+    2
+  );
 }
 
 function renderActions(data) {
@@ -86,22 +93,6 @@ function renderChips(data) {
   });
 }
 
-function renderNotes(data) {
-  UI.dom.el.notes.innerHTML = "";
-  UI.dom.el.warnings.innerHTML = "";
-  (data.notes || []).forEach((note) => {
-    const item = document.createElement("li");
-    item.textContent = note;
-    UI.dom.el.notes.appendChild(item);
-  });
-  (data.warnings || []).forEach((warning) => {
-    const item = document.createElement("li");
-    item.textContent = warning;
-    UI.dom.el.warnings.appendChild(item);
-  });
-  UI.dom.el.notesCard.hidden = !(data.notes || []).length && !(data.warnings || []).length;
-}
-
 function renderPerGroup(data) {
   UI.dom.el.perGroupBox.innerHTML = "";
   const ids = Object.keys(data.per_group || {});
@@ -159,7 +150,6 @@ function renderGrid(data) {
     renderActions,
     currentSelection,
     renderChips,
-    renderNotes,
     renderPerGroup,
     canonicalHand,
     renderGrid,

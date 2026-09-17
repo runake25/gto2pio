@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.2 - 2026-09-17
+
+* **Layout:** everything that *configures* the conversion now lives in the left
+  column - paste JSON, options, `Convert`, then the action picker - so all of it
+  can be set up before the first click. The right column is purely the result:
+  the 13x13 grid first (collapsed by default), then the range, then the
+  per-action ranges and the inspector.
+* Removed the separate "Notes" card. Warnings now surface next to the **Convert**
+  button in amber, and the notes, warnings and detection details are all in the
+  Inspector.
+* Version badge reports 0.3.2.
+
 ## 0.3.1 - 2026-09-17
 
 * **Reorganised the source** into modules instead of two big files:
