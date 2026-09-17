@@ -392,25 +392,47 @@ input[type="number"] { width: 76px; padding: 4px 6px; }
 .tut kbd { border-bottom-width: 2px; }
 .tut-steps { margin: 0 0 8px; padding-left: 20px; }
 .tut-steps li { margin: 0 0 12px; font-size: 13.5px; }
-.tut-options { margin: 0 0 12px; display: grid; grid-template-columns: minmax(150px, 230px) 1fr; gap: 8px 18px; }
-.tut-options dt { font-weight: 600; font-size: 13px; }
-.tut-options dd { margin: 0; color: var(--muted); font-size: 13px; }
-@media (max-width: 640px) { .tut-options { grid-template-columns: 1fr; gap: 2px 0; } }
-.tut-notes { margin: 0 0 12px; padding-left: 20px; color: var(--muted); }
-.tut-notes li { margin: 0 0 6px; font-size: 13px; }
+.tut-big li { margin: 0 0 18px; font-size: 15px; line-height: 1.6; }
+.tut-link { color: #7fb2f0; }
 .tut-note {
   display: block;
-  margin-top: 6px;
+  margin-top: 8px;
   padding-left: 11px;
   border-left: 2px solid var(--line);
   color: var(--muted);
   font-size: 12.5px;
+  line-height: 1.6;
 }
-.tut-edit {
-  margin: 24px 0 0;
-  padding-top: 14px;
-  border-top: 1px dashed var(--line);
-  color: var(--muted);
-  font-size: 12px;
+.tut-tip {
+  margin: 20px 0 0;
+  padding: 13px 15px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #12171e;
+  font-size: 13px;
+  line-height: 1.7;
 }
+.devtools-btn {
+  display: inline-block;
+  margin: 10px 0 0;
+  padding: 8px 14px;
+  border: 1px solid var(--accent-2);
+  border-radius: 8px;
+  background: var(--accent-2);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.devtools-btn:hover { background: var(--accent); border-color: var(--accent); }
+.devtools-hint {
+  display: block;
+  margin: 10px 0 0;
+  padding: 9px 12px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+  background: #12171e;
+  font-size: 13px;
+}
+.devtools-hint[data-state="open"] { border-left-color: var(--good); }
 noscript p { margin-top: 10px; }

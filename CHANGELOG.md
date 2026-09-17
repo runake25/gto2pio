@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.6 - 2026-09-17
+
+* **How to use is now four plain steps** ("open your spot", "open the Network tab",
+  "type `spot` in the filter", "paste, Convert, copy"), written so a beginner can follow
+  it, with the tricky bits in one short tip block.
+* **"Check if it is open" button** next to step 2: a page cannot open DevTools itself, so
+  the button tells you the keys and then notices when the panel really opened (the window
+  shrinks) and confirms it in green.
+* **Links to the official pages** for opening DevTools and for the Network tab (new tab,
+  `rel="noopener"`), and the same two links in the README.
+* Assets moved to `?v=0.3.6`.
+
 ## 0.3.5 - 2026-09-17
 
 * **How to use tab written out.** Three numbered sections: getting the payload out of

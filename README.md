@@ -23,8 +23,9 @@ there is no server to go down or to pay for.
 ## Getting the JSON out of GTO Wizard
 
 1. Open the spot you want in GTO Wizard and let its solution load on screen.
-2. Open the browser developer tools (`F12`, or `Ctrl`+`Shift`+`I`) and switch to the
-   **Network** tab.
+2. Open the browser developer tools (`F12`, or `Ctrl`+`Shift`+`I` - see
+   [how to open DevTools](https://developer.chrome.com/docs/devtools/open)) and switch to
+   the [Network tab](https://developer.chrome.com/docs/devtools/network).
 3. Filter the request list by `spot` - the request called **`spot-solution`** is the one
    that carries the solution.
 4. Click it, open the **Response** tab, copy the whole JSON, paste it into the converter

@@ -170,6 +170,40 @@ function tabFromHash() {
   return (window.location.hash || "").indexOf("tutorial") >= 0 ? "tutorial" : "converter";
 }
 
+/* A page cannot open DevTools for you (browsers block that), so the guide's
+ * button explains the keys and then watches the window size: when the panel
+ * opens, the window gets smaller and the hint switches to "it is open". */
+function devToolsOpen() {
+  return (window.outerWidth - window.innerWidth > 170) ||
+    (window.outerHeight - window.innerHeight > 170);
+}
+
+let devToolsWatch = null;
+
+function showDevToolsHint() {
+  const hint = UI.dom.$("devtools-hint");
+  if (!hint) return;
+  const render = () => {
+    const open = devToolsOpen();
+    hint.dataset.state = open ? "open" : "closed";
+    hint.textContent = open
+      ? "It is open! Now click Network at the top of that panel, then do step 3."
+      : "Not open yet - press F12 now (on a Mac: Command + Option + I). I will say when it is.";
+    hint.hidden = false;
+    return open;
+  };
+  if (render()) return;
+  if (devToolsWatch) return;
+  let ticks = 0;
+  devToolsWatch = window.setInterval(() => {
+    ticks += 1;
+    if (render() || ticks > 120) {
+      window.clearInterval(devToolsWatch);
+      devToolsWatch = null;
+    }
+  }, 700);
+}
+
 function bindToggle(buttonId, box) {
   const button = UI.dom.$(buttonId);
   if (!button || !box) return;
@@ -229,6 +263,7 @@ function init() {
   onClick("preset-continues", presetContinues);
   onClick("preset-all", presetAll);
   onClick("preset-none", presetNone);
+  onClick("devtools-btn", showDevToolsHint);
   onClick("clear-btn", clearAll);
 
   onChange("file-input", (event) => {
@@ -299,6 +334,7 @@ document.addEventListener("DOMContentLoaded", init);
     presetAll,
     presetNone,
     setTab,
+    showDevToolsHint,
     bindToggle,
     clearAll,
     init,

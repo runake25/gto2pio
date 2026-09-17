@@ -8,7 +8,7 @@
   <link rel="icon" href="assets/favicon.ico">
   <!-- Bump the ?v= on every asset when releasing: browsers cache these files for
        10 minutes, and a cached script paired with a newer page is what breaks. -->
-  <link rel="stylesheet" href="css/style.css?v=0.3.5">
+  <link rel="stylesheet" href="css/style.css?v=0.3.6">
 </head>
 <body>
   <header class="topbar">
@@ -139,122 +139,57 @@ No payload at hand? Press &quot;Load GTO Wizard sample&quot; (needs a web server
        ========================================================================== -->
   <main class="tutorial" id="panel-tutorial" hidden>
     <section class="tut">
-      <h2>How to use the converter</h2>
+      <h2>How to use this page</h2>
       <p class="lead">
-        Grab the JSON of the spot you want from GTO Wizard, paste it on the left, tick the
-        actions that belong in the range, then copy the result into PioSOLVER. Everything
-        happens in this browser tab - nothing is uploaded anywhere.
+        You need two things from GTO Wizard: your <strong>spot</strong>, and its
+        <strong>JSON</strong>. This page turns that JSON into a PioSOLVER range. Four steps.
       </p>
 
-      <h3>1 - Get the payload out of GTO Wizard</h3>
-      <ol class="tut-steps">
+      <ol class="tut-steps tut-big">
         <li>
-          <strong>Open the spot you want in GTO Wizard</strong> and let the solution you
-          want to convert load on screen.
+          <strong>Open your spot in GTO Wizard</strong> and wait until you can see the
+          solution on the screen.
         </li>
         <li>
-          <strong>Open the browser developer tools and switch to the Network tab</strong>
-          (<kbd>F12</kbd>, or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd>;
-          <kbd>Cmd</kbd>+<kbd>Option</kbd>+<kbd>I</kbd> on macOS).
-        </li>
-        <li>
-          <strong>Filter the request list by <code>spot</code></strong> - type
-          <code>spot</code> into the Network filter box. The request called
-          <code>spot-solution</code> is the one that carries the solution.
+          <strong>Open the Network tab</strong> - press <kbd>F12</kbd> (on a Mac:
+          <kbd>&#8984;</kbd>+<kbd>&#8997;</kbd>+<kbd>I</kbd>), then click
+          <strong>Network</strong> at the top of the panel that appeared. Nothing happened?
+          Right-click the page &rarr; <strong>Inspect</strong>.
+          <button type="button" class="devtools-btn" id="devtools-btn">Check if it is open</button>
+          <span class="devtools-hint" id="devtools-hint" hidden></span>
           <span class="tut-note">
-            Nothing in the list? The Network tab only shows requests that happen while it is
-            open: leave it open and reload the page (<kbd>F5</kbd>) or reopen the spot, and
-            the <code>spot-solution</code> request appears.
+            New to this? See the official pages:
+            <a class="tut-link" href="https://developer.chrome.com/docs/devtools/open" target="_blank" rel="noopener noreferrer">how to open DevTools</a>
+            and the
+            <a class="tut-link" href="https://developer.chrome.com/docs/devtools/network" target="_blank" rel="noopener noreferrer">Network tab</a>
+            (Chrome, Edge, Brave and Arc work the same way).
           </span>
         </li>
         <li>
-          <strong>Open that request's response and copy the whole JSON.</strong>
-          Click <code>spot-solution</code>, open the <code>Response</code> tab, then copy
-          everything - right click &rarr; <em>Copy</em>, or click inside the response and press
-          <kbd>Ctrl</kbd>+<kbd>A</kbd> then <kbd>Ctrl</kbd>+<kbd>C</kbd>.
-          <span class="tut-note">
-            You want the JSON that contains <code>action_solutions</code> and
-            <code>players_info</code>. The converter names the format it recognised right
-            after converting, so you see immediately whether you copied the right thing.
-          </span>
+          <strong>Type <code>spot</code> in the filter box.</strong> A request called
+          <code>spot-solution</code> appears. Click it, open <strong>Response</strong>,
+          select everything (<kbd>Ctrl</kbd>+<kbd>A</kbd>) and copy it
+          (<kbd>Ctrl</kbd>+<kbd>C</kbd>).
+        </li>
+        <li>
+          <strong>Paste it, press Convert, copy the range.</strong> Paste into the big box
+          on the left (yes, it is long - that is normal), press <strong>Convert</strong>,
+          tick the colours you want, then <strong>Copy</strong> and paste that into
+          PioSOLVER. Done!
         </li>
       </ol>
 
-      <h3>2 - Paste it and convert</h3>
-      <ol class="tut-steps">
-        <li>
-          Click into the <strong>Paste JSON</strong> box on the left and paste
-          (<kbd>Ctrl</kbd>+<kbd>V</kbd>) - the whole response, however long it is. A real
-          spot response is around 200 KB, which is normal.
-        </li>
-        <li>
-          Press <strong>Convert</strong> (or <kbd>Ctrl</kbd>+<kbd>Enter</kbd>). The status
-          line then reports what was detected: the format, the number of hands and the
-          actions of that spot.
-        </li>
-        <li>
-          Nothing at hand? <strong>Load GTO Wizard sample</strong> converts a real response
-          so you can see the whole flow before pasting your own.
-        </li>
-      </ol>
-
-      <h3>3 - Pick the actions and copy the range</h3>
-      <ol class="tut-steps">
-        <li>
-          Every action of the spot is listed with its own colour, its own share of the range
-          and its own range text. Tick the ones the range should contain - call plus the
-          raises is what you get by default.
-        </li>
-        <li>
-          Shortcuts: <strong>Raise + Call</strong>, <strong>Continues</strong> (everything
-          except fold), <strong>All</strong> and <strong>None</strong>.
-        </li>
-        <li>
-          Hit <strong>Copy</strong> or <strong>Download .txt</strong> and paste the range
-          into PioSOLVER's range field.
-        </li>
-      </ol>
-
-      <h3>Where the numbers come from</h3>
-      <p>
-        GTO Wizard reports a hand's action frequencies relative to the combos that hand
-        still has at that node, and reports the combo totals separately. The converter uses
-        both: a hand that is only half in range at this node also keeps half its weight,
-        which is what PioSOLVER expects. The payload's own combo totals are the check - if a
-        range cannot be reproduced from them, an amber warning appears next to
-        <strong>Convert</strong> instead of a silently wrong range.
+      <p class="tut-tip">
+        <strong>Nothing in the list?</strong> DevTools only records what happens while it is
+        open: keep it open and press <kbd>F5</kbd> to reload the page - then
+        <code>spot-solution</code> shows up.
+        <br>
+        <strong>No spot at hand?</strong> Press <strong>Load GTO Wizard sample</strong> and
+        watch the whole thing work.
+        <br>
+        <strong>Reading the grid:</strong> every colour is one action, and the height of a
+        slice is how often that hand takes it.
       </p>
-
-      <h3>Reading the 13&times;13 grid</h3>
-      <p>
-        Every cell is a hand and every coloured slice is one of the actions you ticked,
-        with the slice height showing that hand's real split (a hand that folds 60% and
-        calls 40% shows two slices in that proportion). The colours match the tick boxes,
-        so the range you are about to copy is visible at a glance.
-      </p>
-
-      <h3>What the options do</h3>
-      <dl class="tut-options">
-        <dt>Merge suited+offsuit on equal weight</dt>
-        <dd><code>AKs</code> and <code>AKo</code> both at 50% become a single entry, <code>AK:0.5</code>.</dd>
-        <dt>Average per-combo data</dt>
-        <dd>Combo-level payloads (<code>AcKd</code>, <code>AhKs</code>, ...) are averaged into their hand class.</dd>
-        <dt>Decimals</dt>
-        <dd>Decimals kept on the weights: 2 gives <code>AA:0.33</code>, 0 gives plain <code>AA</code>.</dd>
-        <dt>Min weight</dt>
-        <dd>Drops hands below that frequency: 0.05 hides anything under 5%.</dd>
-        <dt>Scale</dt>
-        <dd>How the payload's numbers are read: <code>auto</code> guesses, <code>fraction</code> uses 0-1 as-is, <code>percent</code> divides by 100.</dd>
-      </dl>
-
-      <h3>Good to know</h3>
-      <ul class="tut-notes">
-        <li>A response covers the whole spot: the strategy arrays belong to the player who acts at that node, and that is the range you get.</li>
-        <li>The conversion runs entirely in your browser - your JSON is never uploaded and never sent to a server.</li>
-        <li>One node at a time: for another street or the other player, grab that spot's payload the same way.</li>
-        <li>The <strong>Inspector</strong> under the range shows what was detected (format, score, the hand order it used, notes and warnings) whenever a payload looks off.</li>
-        <li>It converts JSON to a Pio range, not the other way round.</li>
-      </ul>
     </section>
   </main>
 
@@ -275,18 +210,18 @@ No payload at hand? Press &quot;Load GTO Wizard sample&quot; (needs a web server
   </footer>
 
   <!-- the converter: plain scripts, so this order is the dependency order -->
-  <script src="js/lib/common.js?v=0.3.5"></script>
-  <script src="js/lib/hands.js?v=0.3.5"></script>
-  <script src="js/lib/actions.js?v=0.3.5"></script>
-  <script src="js/lib/pio.js?v=0.3.5"></script>
-  <script src="js/lib/schema.js?v=0.3.5"></script>
-  <script src="js/lib/parser.js?v=0.3.5"></script>
-  <script src="js/lib/gto2pio.js?v=0.3.5"></script>
+  <script src="js/lib/common.js?v=0.3.6"></script>
+  <script src="js/lib/hands.js?v=0.3.6"></script>
+  <script src="js/lib/actions.js?v=0.3.6"></script>
+  <script src="js/lib/pio.js?v=0.3.6"></script>
+  <script src="js/lib/schema.js?v=0.3.6"></script>
+  <script src="js/lib/parser.js?v=0.3.6"></script>
+  <script src="js/lib/gto2pio.js?v=0.3.6"></script>
   <!-- the page: dom -> colors -> render -> files -> main -->
-  <script src="js/ui/dom.js?v=0.3.5"></script>
-  <script src="js/ui/colors.js?v=0.3.5"></script>
-  <script src="js/ui/render.js?v=0.3.5"></script>
-  <script src="js/ui/files.js?v=0.3.5"></script>
-  <script src="js/ui/main.js?v=0.3.5"></script>
+  <script src="js/ui/dom.js?v=0.3.6"></script>
+  <script src="js/ui/colors.js?v=0.3.6"></script>
+  <script src="js/ui/render.js?v=0.3.6"></script>
+  <script src="js/ui/files.js?v=0.3.6"></script>
+  <script src="js/ui/main.js?v=0.3.6"></script>
 </body>
 </html>
