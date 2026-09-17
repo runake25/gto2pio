@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.1 - 2026-09-17
+
+* **Reorganised the source** into modules instead of two big files:
+  `js/lib/` (common, hands, actions, pio, schema, parser, gto2pio) holds the
+  converter and `js/ui/` (dom, render, files, main) holds the page, with
+  `css/` and `assets/` for the styling and icon. Nothing was rewritten by hand -
+  the mover verified itself by re-assembling the original files byte for byte
+  before writing anything, and the refactor was signed off by the 112-case
+  parity check plus the headless-browser test.
+* No behaviour change: identical output on all 112 payload x option cases.
+
 ## 0.3.0 - 2026-09-16
 
 * **The converter now runs inside the browser** (`core.js`), which turns the tool

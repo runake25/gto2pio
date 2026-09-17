@@ -18,14 +18,17 @@ jobs:
 
       - name: Syntax check
         run: |
-          node --check core.js
-          node --check app.js
+          for file in js/lib/*.js js/ui/*.js; do
+            node --check "$file"
+          done
 
       - name: Convert the shipped sample in node
         run: |
           node <<'JS'
           const fs = require("fs");
-          require("./core.js");
+          for (const module of ["common", "hands", "actions", "pio", "schema", "parser", "gto2pio"]) {
+            require(`./js/lib/${module}.js`);
+          }
           const core = globalThis.GTO2PIO;
           const fail = (message) => { console.error("FAIL: " + message); process.exit(1); };
           const same = (actual, expected, label) => {
@@ -51,5 +54,5 @@ jobs:
           }
           if (!threw) fail("an unrecognised payload should raise ParseError with diagnostics");
 
-          console.log("core.js converts the shipped sample correctly");
+          console.log("the converter converts the shipped sample correctly")
           JS

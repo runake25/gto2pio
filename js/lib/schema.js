@@ -1,444 +1,34 @@
 "use strict";
-/* GTO Wizard -> PioSOLVER range converter.
+
+/* Structural detection of a pasted payload (the supported shapes).
  *
- * This is the browser build of the converter: the whole pipeline runs client
- * side, so the page is a plain static site (no server, no build step, no CDN).
- * It mirrors the reference implementation module by module:
- *
- *   1. hands    - 169 hand classes, combo counts, canonicalisation
- *   2. actions  - action codes/labels -> normalised families
- *   3. pio      - range string emission + combo statistics
- *   4. schema   - structural detection of a pasted payload
- *   5. parser   - analyze(): the single entry point used by the UI
- *
- * Everything is wrapped in one IIFE; the public surface is exposed as
- * ``GTO2PIO`` (on the page and on globalThis, so Node can require() this file
- * for the parity tests).
+ * Attached to the GTO2PIO namespace; no bundler, no build step.
  */
 (function (root) {
-  // ---------------------------------------------------------------- hands --
-  const RANK_CHARS = "AKQJT98765432"; // descending, index 0 == Ace
-  const VALID_RANKS = new Set(RANK_CHARS.split(""));
-  const SUITS = "cdhs";
-  const CLASS_COMBOS = { pair: 6, suited: 4, offsuit: 12 };
+  const GTO2PIO = (root.GTO2PIO = root.GTO2PIO || {});
 
-  const CLASS_RE = /^([AKQJT2-9])([AKQJT2-9])([SO])$/;
-  const PAIR_RE = /^([AKQJT2-9])([AKQJT2-9])$/;
-  const COMBO_RE = /^([AKQJT2-9])([CDHS])([AKQJT2-9])([CDHS])$/;
+  const { ParseError, fixed, formatG, isPlainObject, lookupKey, pyRound } = GTO2PIO.common;
+  const { PIO_ORDER, comboCount, isComboToken, isHandToken } = GTO2PIO.hands;
+  const { actionLabel, normalizeAction } = GTO2PIO.actions;
 
-  function buildOrder() {
-    const order = [];
-    for (const hi of RANK_CHARS) order.push(hi + hi);
-    for (let i = 0; i < RANK_CHARS.length; i += 1) {
-      const hi = RANK_CHARS[i];
-      for (let j = i + 1; j < RANK_CHARS.length; j += 1) {
-        const lo = RANK_CHARS[j];
-        order.push(hi + lo + "s");
-        order.push(hi + lo + "o");
-      }
-    }
-    return order;
-  }
-
-  const PIO_ORDER = buildOrder();
-  const HAND_INDEX = {};
-  PIO_ORDER.forEach((hand, index) => {
-    HAND_INDEX[hand] = index;
-  });
-
-  function handType(token) {
-    const t = String(token).trim().toUpperCase();
-    if (t.length === 2) return "pair";
-    return t.endsWith("S") ? "suited" : "offsuit";
-  }
-
-  function comboCount(token) {
-    const t = String(token).trim().toUpperCase();
-    if (t.length === 2) return t[0] === t[1] ? 6 : 16;
-    return CLASS_COMBOS[handType(t)];
-  }
-
-  function orderedPair(rankA, rankB) {
-    return RANK_CHARS.indexOf(rankA) < RANK_CHARS.indexOf(rankB)
-      ? [rankA, rankB]
-      : [rankB, rankA];
-  }
-
-  function canonicalFromCombo(token) {
-    const match = COMBO_RE.exec(String(token).trim().toUpperCase());
-    if (!match) return null;
-    const [, rankA, suitA, rankB, suitB] = match;
-    if (rankA === rankB && suitA === suitB) return null; // same card twice
-    if (rankA === rankB) return rankA + rankB;
-    const [hi, lo] = orderedPair(rankA, rankB);
-    return `${hi}${lo}${suitA === suitB ? "s" : "o"}`;
-  }
-
-  /* Canonical *class* token, or null when the token is not a hand. "AK" is
-   * deliberately ambiguous (suited + offsuit) and returns null. */
-  function canonicalHand(token) {
-    if (typeof token !== "string") return null;
-    const text = token.trim();
-    if (!text) return null;
-
-    if (text.length === 4) return canonicalFromCombo(text);
-
-    const upper = text.toUpperCase();
-    if (upper.length === 3) {
-      const match = CLASS_RE.exec(upper);
-      if (!match) return null;
-      const [, rankA, rankB, kind] = match;
-      if (rankA === rankB) return rankA + rankB;
-      const [hi, lo] = orderedPair(rankA, rankB);
-      return `${hi}${lo}${kind.toLowerCase()}`;
-    }
-
-    if (upper.length === 2) {
-      const match = PAIR_RE.exec(upper);
-      if (!match) return null;
-      const [, rankA, rankB] = match;
-      if (rankA !== rankB) return null;
-      return rankA + rankB;
-    }
-
-    return null;
-  }
-
-  /* "AK" -> ["AKs","AKo"], "AhAd" -> ["AA"], "QQ" -> ["QQ"], junk -> []. */
-  function expandHandToken(token) {
-    if (typeof token !== "string") return [];
-    const text = token.trim();
-    if (!text) return [];
-
-    const combo = canonicalFromCombo(text);
-    if (combo) return [combo];
-
-    const classToken = canonicalHand(text);
-    if (classToken) return [classToken];
-
-    const upper = text.toUpperCase();
-    if (upper.length === 2 && VALID_RANKS.has(upper[0]) && VALID_RANKS.has(upper[1])) {
-      const [hi, lo] = orderedPair(upper[0], upper[1]);
-      return [`${hi}${lo}s`, `${hi}${lo}o`];
-    }
-    return [];
-  }
-
-  function isHandToken(token) {
-    return expandHandToken(token).length > 0;
-  }
-
-  function isComboToken(token) {
-    return typeof token === "string" && COMBO_RE.test(token.trim().toUpperCase());
-  }
-  // -------------------------------------------------------------- actions --
-  const FAMILY_ALIASES = {
-    f: "fold", fold: "fold",
-    x: "check", check: "check",
-    c: "call", call: "call",
-    b: "bet", bet: "bet",
-    r: "raise", raise: "raise",
-    ai: "allin", rai: "allin", allin: "allin",
-    "all-in": "allin", all_in: "allin", jam: "allin", shove: "allin",
-  };
-  const FAMILY_LABELS = {
-    fold: "Fold", check: "Check", call: "Call",
-    bet: "Bet", raise: "Raise", allin: "All-in",
-  };
-  const NUMBER_RE = /-?\d+(?:\.\d+)?/;
-  const ACTION_KEYS = ["action", "code", "type", "name", "label", "action_type", "actiontype"];
-  const SIZE_KEYS = [
-    "betsize", "bet_size", "bet size", "amount", "size",
-    "raise_size", "raise_size_bb", "to_amount", "value",
-  ];
-  const POSITION_KEYS = ["position", "player", "actor", "seat"];
-
-  /* Python's str.title(): capitalise each run of letters, lower the rest. */
-  function pyTitle(text) {
-    return String(text).replace(/[A-Za-z]+/g, (run) => run[0].toUpperCase() + run.slice(1).toLowerCase());
-  }
-
-  /* Python's "%g": 6 significant digits, trailing zeros stripped. */
-  function formatG(value) {
-    const v = Number(value);
-    if (!isFinite(v)) return String(value);
-    if (v === 0) return "0";
-    const exp = Math.floor(Math.log10(Math.abs(v)));
-    if (exp < -4 || exp >= 6) {
-      return v
-        .toExponential(5)
-        .replace(/\.?0+e/, "e")
-        .replace(/e([+-])(\d)$/, "e$10$2");
-    }
-    let text = v.toFixed(Math.max(0, 5 - exp));
-    if (text.indexOf(".") >= 0) text = text.replace(/0+$/, "").replace(/\.$/, "");
-    return text;
-  }
-
-  function actionLabel(info) {
-    if (info.name) return info.name;
-    const base = FAMILY_LABELS[info.family] || pyTitle(info.family);
-    if (info.betsize === null || info.betsize === undefined) return base;
-    if (info.family === "fold" || info.family === "check" || info.family === "call") return base;
-    return `${base} ${formatG(info.betsize)}`;
-  }
-
-  function coerceSize(value) {
-    if (typeof value === "boolean") return null;
-    if (typeof value === "number") return Number.isFinite(value) ? value : null;
-    if (typeof value === "string") {
-      const match = NUMBER_RE.exec(value);
-      if (match) return parseFloat(match[0]);
-    }
-    return null;
-  }
-
-  function isPlainObject(value) {
-    return typeof value === "object" && value !== null && !Array.isArray(value);
-  }
-
-  /* Maps keyed by strings from untrusted input must not inherit from Object.prototype. */
-  function emptyMap() {
-    return Object.create(null);
-  }
-
-  /* Case-insensitive lookup of the first present key (exact key wins). */
-  function lookupKey(mapping, keys) {
-    const lowered = {};
-    for (const key of Object.keys(mapping)) lowered[String(key).trim().toLowerCase()] = mapping[key];
-    for (const key of keys) {
-      if (Object.prototype.hasOwnProperty.call(mapping, key)) return mapping[key];
-      if (Object.prototype.hasOwnProperty.call(lowered, key)) return lowered[key];
-    }
-    return null;
-  }
-
-  /* Map an action code / word onto a family, tolerating embedded sizes. */
-  function familyFromText(text) {
-    const stripped = String(text).trim();
-    if (!stripped) return null;
-    const lowered = stripped.toLowerCase();
-    const squashed = lowered.replace(/-/g, "").replace(/_/g, "").replace(/ /g, "");
-    for (const candidate of [lowered, squashed]) {
-      if (Object.prototype.hasOwnProperty.call(FAMILY_ALIASES, candidate)) {
-        return FAMILY_ALIASES[candidate];
-      }
-    }
-    const prefix = stripped.split(/[\d.]+/)[0].trim().toLowerCase();
-    return Object.prototype.hasOwnProperty.call(FAMILY_ALIASES, prefix) ? FAMILY_ALIASES[prefix] : null;
-  }
-
-  function makeId(family, size) {
-    if (size === null || size === undefined) return family;
-    return `${family}:${formatG(size)}`;
-  }
-
-  function rawActionText(raw) {
-    for (const key of ACTION_KEYS) {
-      const value = lookupKey(raw, [key]);
-      if (isPlainObject(value)) {
-        const code = lookupKey(value, ["code", "type", "action"]);
-        const size = lookupKey(value, SIZE_KEYS);
-        if (code) return size === null || size === undefined ? String(code) : `${code} ${size}`;
-      } else if (typeof value === "string") {
-        return value;
-      }
-    }
-    return "";
-  }
-  /* Best-effort conversion of one raw action into a normalised action. */
-  function normalizeAction(raw) {
-    if (raw === null || raw === undefined) return null;
-
-    if (typeof raw === "string") {
-      const family = familyFromText(raw);
-      if (family === null) return null;
-      const size = family === "fold" || family === "check" || family === "call" ? null : coerceSize(raw);
-      return { id: makeId(family, size), family, betsize: size, position: null, name: null, raw };
-    }
-
-    if (isPlainObject(raw)) {
-      let family = null;
-      let position = null;
-      let nestedSize = null;
-
-      for (const key of ACTION_KEYS) {
-        const value = lookupKey(raw, [key]);
-        if (value === null || typeof value === "number" || typeof value === "boolean") continue;
-        if (isPlainObject(value)) {
-          const nested = normalizeAction(value);
-          if (nested !== null) {
-            family = nested.family;
-            nestedSize = nested.betsize;
-            position = nested.position;
-            break;
-          }
-        } else if (typeof value === "string") {
-          family = familyFromText(value);
-          if (family) break;
-        }
-      }
-
-      if (family === null) return null;
-
-      let size = null;
-      if (family !== "fold" && family !== "check" && family !== "call" && family !== "allin") {
-        size = coerceSize(lookupKey(raw, SIZE_KEYS));
-        if (size === null) size = nestedSize;
-        if (size === null) {
-          for (const key of ACTION_KEYS) {
-            const value = lookupKey(raw, [key]);
-            if (typeof value === "string") {
-              size = coerceSize(value); // "R2.5" -> 2.5
-              break;
-            }
-          }
-        }
-      }
-
-      const positionValue = lookupKey(raw, POSITION_KEYS);
-      if (typeof positionValue === "string") position = positionValue;
-
-      return {
-        id: makeId(family, size), family, betsize: size,
-        position, name: null, raw: rawActionText(raw),
-      };
-    }
-
-    return null;
-  }
-
-  /* Human label for an action id such as "raise:2.5" or "call". */
-  function labelForId(actionId) {
-    const text = String(actionId);
-    const cut = text.indexOf(":");
-    const family = cut < 0 ? text : text.slice(0, cut);
-    const sizeText = cut < 0 ? "" : text.slice(cut + 1);
-    const base = FAMILY_LABELS[family] || pyTitle(family);
-    return sizeText ? `${base} ${sizeText}` : base;
-  }
-  // ------------------------------------------------------------------ pio --
-  /* Python's round(value, decimals): correctly rounded, half-to-even.
-   *
-   * Rounding the scaled float is not good enough (0.35*10 = 3.5000000000000004
-   * would round up, while python rounds the exact value 0.3499... down), so the
-   * exact decimal expansion of the double is used instead.
-   */
-  function pyRound(value, decimals) {
-    const v = Number(value);
-    if (!Number.isFinite(v)) return v;
-    if (!(decimals >= 0 && decimals <= 20)) return Math.round(v * Math.pow(10, decimals)) / Math.pow(10, decimals);
-
-    const sign = v < 0 ? -1 : 1;
-    const text = Math.abs(v).toFixed(20); // 20 decimals see every tie that matters
-    const dot = text.indexOf(".");
-    const intPart = text.slice(0, dot);
-    const fracPart = text.slice(dot + 1);
-    const keep = fracPart.slice(0, decimals);
-    const rest = fracPart.slice(decimals);
-
-    let digits = Number(intPart + keep);
-    const head = rest.charAt(0);
-    if (head > "5") digits += 1;
-    else if (head === "5") {
-      if (/^0*$/.test(rest.slice(1))) {
-        if (digits % 2 !== 0) digits += 1; // exact tie -> half to even
-      } else {
-        digits += 1;
-      }
-    }
-
-    return (sign * digits) / Math.pow(10, decimals);
-  }
-
-  /* Python's f"{value:.{decimals}f}". */
-  function fixed(value, decimals) {
-    return Number(value).toFixed(decimals);
-  }
-
-  function weightSuffix(quantized, decimals) {
-    if (quantized >= 1.0) return "";
-    const text = fixed(quantized, decimals).replace(/0+$/, "").replace(/\.$/, "");
-    return `:${text}`;
-  }
-
-  /* Render {hand: weight} as a PioSOLVER range string. */
-  function formatPioRange(weights, opts) {
-    const options = opts || {};
-    const decimals = Math.max(0, Math.min(Number(options.decimals === undefined ? 2 : options.decimals), 6));
-    const minWeight = options.minWeight === undefined ? 0.0 : Number(options.minWeight);
-    const combine = options.combineSuitedOffsuit === undefined ? true : Boolean(options.combineSuitedOffsuit);
-
-    const parts = [];
-    const consumed = new Set();
-    const weightOf = (hand) => (weights[hand] === undefined ? 0.0 : Number(weights[hand]));
-
-    for (const hand of PIO_ORDER) {
-      if (consumed.has(hand)) continue;
-
-      if (combine && hand.endsWith("s")) {
-        const offsuit = `${hand.slice(0, -1)}o`;
-        const suitedQ = pyRound(weightOf(hand), decimals);
-        const offsuitQ = pyRound(weightOf(offsuit), decimals);
-        if (suitedQ > 0 && suitedQ < 1.0 && suitedQ === offsuitQ && weightOf(hand) >= minWeight) {
-          parts.push(hand.slice(0, -1) + weightSuffix(suitedQ, decimals));
-          consumed.add(offsuit);
-          continue;
-        }
-        if (suitedQ >= 1.0 && offsuitQ >= 1.0 && weightOf(hand) >= minWeight) {
-          parts.push(hand.slice(0, -1));
-          consumed.add(offsuit);
-          continue;
-        }
-      }
-
-      const raw = weightOf(hand);
-      const quantized = pyRound(raw, decimals);
-      if (quantized <= 0 || raw < minWeight) continue;
-      parts.push(hand + weightSuffix(quantized, decimals));
-    }
-
-    return parts.join(",");
-  }
-
-  /* Weighted combo count / share of all 1326 combos. */
-  function rangeStats(weights) {
-    let combos = 0;
-    let hands = 0;
-    for (const hand of Object.keys(weights)) {
-      const weight = Number(weights[hand]);
-      combos += comboCount(hand) * weight;
-      if (weight > 0) hands += 1;
-    }
-    return {
-      hands,
-      combos: pyRound(combos, 2),
-      percent: pyRound((combos / 1326.0) * 100.0, 2),
-    };
-  }
-  // --------------------------------------------------------------- schema --
   const HAND_KEYS = [
     "hand", "hand_str", "handstr", "hand_name", "handname", "hand_class",
     "handclass", "combo", "cards", "card", "key", "name",
   ];
+
   const ACTION_LIST_KEYS = [
     "actions", "available_actions", "action_solutions", "action_list",
     "actions_list", "strategies", "strategy_actions", "action_solution",
   ];
+
   const FREQ_KEYS = [
     "frequency", "freq", "weight", "probability", "prob", "frequency_pct",
     "pct", "percentage", "value", "action_frequency", "strategy_weight",
   ];
-  const STRATEGY_HINT_KEYS = ["strategy", "solution", "hand_actions", "range", "weights"];
-  const MIN_HANDS = 1;
 
-  class ParseError extends Error {
-    constructor(message, diagnostics) {
-      super(message);
-      this.name = "ParseError";
-      this.diagnostics = diagnostics || {};
-    }
-  }
+  const STRATEGY_HINT_KEYS = ["strategy", "solution", "hand_actions", "range", "weights"];
+
+  const MIN_HANDS = 1;
 
   /* Coerce numbers, numeric strings ("45", "45%") and frequency objects. */
   function toNumber(value) {
@@ -552,6 +142,7 @@
     }
     return [null, null];
   }
+
   /* Columns for a list of {"action": ..., <hand map>} objects. */
   function actionHandColumns(node) {
     const columns = [];
@@ -695,10 +286,12 @@
     }
     return found;
   }
+
   const GW_STRATEGY_KEYS = [
     "strategy", "strategies", "frequencies", "hand_frequencies",
     "frequency", "weights", "action_frequencies",
   ];
+
   const GW_COMBO_TOTAL_KEYS = ["total_combos", "total_combo", "combos"];
 
   /* GTO Wizard's internal order of its 169-element strategy arrays. */
@@ -810,6 +403,7 @@
     for (let index = 0; index < size; index += 1) mapping[hands[index]] = values[index];
     return mapping;
   }
+
   /* GTO Wizard action_solutions: one action + one frequency array per hand. */
   function fromActionStrategyArrays(found) {
     const candidates = [];
@@ -890,6 +484,7 @@
 
     return candidates;
   }
+
   /* {"hands": [...], "strategy": [[freq, ...], ...]} layouts. */
   function fromMatrices(found) {
     const candidates = [];
@@ -954,6 +549,7 @@
     }
     return candidates;
   }
+
   /* Union of inner keys, ordered by first appearance (widest record first). */
   function orderedActionKeys(node) {
     const records = Object.values(node)
@@ -1046,6 +642,7 @@
     }
     return candidates;
   }
+
   const RECORD_CONTAINER_KEYS = [
     "actions", "action_solutions", "strategies", "strategy", "frequencies",
     "weights", "frequencies_list", "action_frequencies",
@@ -1162,6 +759,7 @@
     }
     return candidates;
   }
+
   /* [{"action": {...}, "strategy": {"AA": 0.5, "KK": 1.0}}, ...] */
   function fromActionHandMaps(found) {
     const columns = [];
@@ -1280,6 +878,7 @@
     }
     return summary;
   }
+
   /* Find the strategy inside doc; throws ParseError when clueless. */
   function detect(doc, scaleOption) {
     const scale = scaleOption === undefined ? "auto" : scaleOption;
@@ -1383,318 +982,52 @@
     };
   }
 
-  // --------------------------------------------------------------- parser --
-  /* Tolerate trailing commas and "const data = {...};" wrapping. */
-  function cleanJsonText(text) {
-    let stripped = String(text).trim();
-    if (!stripped) return stripped;
-    if (stripped[0] !== "{" && stripped[0] !== "[") {
-      const firstObject = stripped.indexOf("{");
-      const firstArray = stripped.indexOf("[");
-      const candidates = [firstObject, firstArray].filter((index) => index >= 0);
-      if (candidates.length) {
-        const start = Math.min.apply(null, candidates);
-        const closer = stripped[start] === "{" ? "}" : "]";
-        const end = stripped.lastIndexOf(closer);
-        if (end > start) stripped = stripped.slice(start, end + 1);
-      }
-    }
-    return stripped.replace(/,\s*(?=[}\]])/g, "");
-  }
 
-  /* Accept a JSON string (as pasted) or an already-parsed document. */
-  function loadPayload(payload) {
-    if (isPlainObject(payload) || Array.isArray(payload)) return payload;
-    if (typeof payload !== "string") throw new ParseError(`unsupported payload type: ${typeof payload}`);
-    const text = payload.trim();
-    if (!text) throw new ParseError("no JSON provided");
-    try {
-      return JSON.parse(text);
-    } catch (firstError) {
-      const cleaned = cleanJsonText(text);
-      if (cleaned !== text) {
-        try {
-          return JSON.parse(cleaned);
-        } catch (ignored) {
-          /* report the original error below */
-        }
-      }
-      throw new ParseError(`invalid JSON: ${firstError.message}`);
-    }
-  }
-
-  const GROUP_LABELS = {
-    fold: "Fold", check: "Check", call: "Call", bet: "Bet", raise: "Raise", allin: "All-in",
-  };
-  const MERGEABLE_GROUPS = ["bet", "raise", "allin"];
-
-  /* Collapse an action into a selectable group id. */
-  function groupKey(action, options) {
-    const family = action.family;
-    if (family === "unknown") return action.id;
-    if (family === "allin") {
-      if (options.allinAsRaise) return options.mergeSizes ? "raise" : action.id;
-      return options.mergeSizes ? "allin" : action.id;
-    }
-    if ((family === "bet" || family === "raise") && !options.mergeSizes) return action.id;
-    return family;
-  }
-
-  function groupLabel(groupId, options) {
-    const base = GROUP_LABELS[groupId];
-    if (base === undefined) return labelForId(groupId);
-    if (options.mergeSizes && MERGEABLE_GROUPS.indexOf(groupId) >= 0) return `${base} (all sizes)`;
-    return base;
-  }
-
-  function buildGroups(detection, options) {
-    const order = [];
-    const members = emptyMap();
-    const actionGroup = emptyMap();
-    for (const action of detection.actions) {
-      const groupId = groupKey(action, options);
-      actionGroup[action.id] = groupId;
-      if (!members[groupId]) {
-        members[groupId] = [];
-        order.push(groupId);
-      }
-      members[groupId].push(action);
-    }
-    return { order, members, actionGroup };
-  }
-
-  /* Sum action weights into per-group weights. */
-  function sumByGroup(hands, actionGroup) {
-    const grouped = emptyMap();
-    for (const hand of Object.keys(hands)) {
-      const actions = hands[hand];
-      for (const actionId of Object.keys(actions)) {
-        const groupId = actionGroup[actionId];
-        if (groupId === undefined) continue;
-        if (!grouped[groupId]) grouped[groupId] = {};
-        grouped[groupId][hand] = (grouped[groupId][hand] || 0.0) + Number(actions[actionId]);
-      }
-    }
-    return grouped;
-  }
-
-  /* Share of all 1326 combos as a percentage. */
-  function share(mapping) {
-    return rangeStats(mapping).percent;
-  }
-
-  /* Fold combo-level payloads and ambiguous "AK" tokens into hand classes. */
-  function normaliseHands(weights, options) {
-    const direct = emptyMap();
-    const comboAccum = emptyMap();
-    const combosPerClass = emptyMap();
-
-    for (const hand of Object.keys(weights)) {
-      const actions = weights[hand];
-      let handClasses;
-
-      if (isComboToken(hand)) {
-        const classToken = canonicalHand(hand);
-        if (classToken === null) continue;
-        if (options.aggregateCombos) {
-          combosPerClass[classToken] = (combosPerClass[classToken] || 0) + 1;
-          for (const actionId of Object.keys(actions)) {
-            const key = `${classToken}\u0000${actionId}`;
-            if (!comboAccum[key]) comboAccum[key] = [];
-            comboAccum[key].push(Number(actions[actionId]));
-          }
-          continue;
-        }
-        handClasses = [classToken];
-      } else {
-        handClasses = expandHandToken(hand);
-        if (!handClasses.length) continue;
-      }
-
-      for (const classToken of handClasses) {
-        if (!direct[classToken]) direct[classToken] = {};
-        const bucket = direct[classToken];
-        for (const actionId of Object.keys(actions)) {
-          bucket[actionId] = (bucket[actionId] || 0.0) + Number(actions[actionId]);
-        }
-      }
-    }
-
-    for (const key of Object.keys(comboAccum)) {
-      const separator = key.indexOf("\u0000");
-      const classToken = key.slice(0, separator);
-      const actionId = key.slice(separator + 1);
-      const values = comboAccum[key];
-      let sum = 0;
-      for (const value of values) sum += value;
-      const divisor = Math.max(combosPerClass[classToken] || values.length, 1);
-      if (!direct[classToken]) direct[classToken] = {};
-      direct[classToken][actionId] = (direct[classToken][actionId] || 0.0) + sum / divisor;
-    }
-
-    return direct;
-  }
-  /* UI options -> the internal option shape (mirrors the old API layer). */
-  function normalizeOptions(raw) {
-    const value = raw || {};
-    const pick = (camel, snake, fallback) => {
-      if (value[camel] !== undefined) return value[camel];
-      if (value[snake] !== undefined) return value[snake];
-      return fallback;
-    };
-
-    let decimals = Number(pick("decimals", "decimals", 2));
-    if (!Number.isFinite(decimals)) decimals = 2;
-    decimals = Math.max(0, Math.min(Math.trunc(decimals), 6));
-
-    let minWeight = Number(pick("minWeight", "min_weight", 0));
-    if (!Number.isFinite(minWeight)) minWeight = 0;
-    minWeight = Math.max(0.0, Math.min(minWeight, 1.0));
-
-    let scale = String(pick("scale", "scale", "auto")).trim().toLowerCase();
-    if (["auto", "fraction", "percent"].indexOf(scale) < 0) scale = "auto";
-
-    const include = value.include;
-    return {
-      include: Array.isArray(include) ? include.map((entry) => String(entry)) : null,
-      mergeSizes: Boolean(pick("mergeSizes", "merge_sizes", true)),
-      allinAsRaise: Boolean(pick("allinAsRaise", "allin_as_raise", true)),
-      decimals,
-      minWeight,
-      combineSuitedOffsuit: Boolean(pick("combineSuitedOffsuit", "combine_suited_offsuit", true)),
-      aggregateCombos: Boolean(pick("aggregateCombos", "aggregate_combos", true)),
-      scale,
-    };
-  }
-
-  function buildGrid(merged) {
-    const grid = {};
-    for (const hand of PIO_ORDER) {
-      const weight = merged[hand] === undefined ? 0.0 : Number(merged[hand]);
-      grid[hand] = pyRound(weight, 4);
-    }
-    return grid;
-  }
-
-  /* Convert a GTO Wizard payload into PioSOLVER range text. */
-  function analyze(payload, rawOptions) {
-    const options = normalizeOptions(rawOptions);
-    const detection = detect(loadPayload(payload), options.scale);
-
-    const groups = buildGroups(detection, options);
-    const order = groups.order;
-    const members = groups.members;
-    const hands = normaliseHands(detection.weights, options);
-    const grouped = sumByGroup(hands, groups.actionGroup);
-
-    let defaultInclude = order.filter((groupId) => groupId !== "fold");
-    if (!defaultInclude.length) defaultInclude = order.slice();
-    const requested = options.include === null ? defaultInclude : options.include;
-    const requestedSet = new Set(requested);
-    let included = order.filter((groupId) => requestedSet.has(groupId));
-    if (!included.length) {
-      included = requested.filter((groupId) => members[groupId] !== undefined);
-    }
-
-    const merged = {};
-    for (const groupId of included) {
-      const mapping = grouped[groupId] || {};
-      for (const hand of Object.keys(mapping)) {
-        merged[hand] = Math.min(1.0, (merged[hand] || 0.0) + Number(mapping[hand]));
-      }
-    }
-
-    const formatOptions = {
-      decimals: options.decimals,
-      minWeight: options.minWeight,
-      combineSuitedOffsuit: options.combineSuitedOffsuit,
-    };
-    const rangeText = formatPioRange(merged, formatOptions);
-
-    const perGroup = emptyMap();
-    for (const groupId of order) {
-      const mapping = grouped[groupId] || {};
-      perGroup[groupId] = {
-        label: groupLabel(groupId, options),
-        range_text: formatPioRange(mapping, formatOptions),
-        stats: rangeStats(mapping),
-      };
-    }
-
-    const groupList = [];
-    for (const groupId of order) {
-      const entries = members[groupId].map((action) => {
-        const mapping = {};
-        for (const hand of Object.keys(hands)) {
-          const row = hands[hand];
-          mapping[hand] = row[action.id] === undefined ? 0.0 : row[action.id];
-        }
-        return {
-          id: action.id, label: actionLabel(action),
-          family: action.family, share: share(mapping),
-        };
-      });
-      groupList.push({
-        id: groupId,
-        label: groupLabel(groupId, options),
-        selected: included.indexOf(groupId) >= 0,
-        share: share(grouped[groupId] || {}),
-        actions: entries,
-      });
-    }
-
-    const stats = rangeStats(merged);
-    const notes = detection.notes.slice();
-    const warnings = detection.warnings.slice();
-    if (!included.length) warnings.push("no actions selected - the range is empty");
-
-    let allGroupsShare = 0;
-    for (const groupId of order) allGroupsShare += share(grouped[groupId] || {});
-
-    return {
-      range_text: rangeText,
-      groups: groupList,
-      included,
-      stats,
-      totals: {
-        all_groups_share: pyRound(allGroupsShare, 2),
-        included_share: stats.percent,
-      },
-      per_group: perGroup,
-      grid: buildGrid(merged),
-      detection: {
-        format_id: detection.formatId,
-        format_label: detection.formatLabel,
-        hand_count: detection.handCount,
-        combo_level: detection.comboLevel,
-        diagnostics: detection.diagnostics,
-      },
-      notes,
-      warnings,
-      hand_count: detection.handCount,
-    };
-  }
-  root.GTO2PIO = {
-    VERSION: "0.3.0",
-    PIO_ORDER,
-    HAND_INDEX,
-    RANK_CHARS,
-    handType,
-    comboCount,
-    canonicalHand,
-    canonicalFromCombo,
-    expandHandToken,
-    isHandToken,
-    isComboToken,
-    normalizeAction,
-    actionLabel,
-    labelForId,
-    formatPioRange,
-    rangeStats,
+  GTO2PIO.schema = {
+    HAND_KEYS,
+    ACTION_LIST_KEYS,
+    FREQ_KEYS,
+    STRATEGY_HINT_KEYS,
+    MIN_HANDS,
+    toNumber,
+    iterNodes,
+    handRatio,
+    actionRatio,
+    numericList,
+    numericMatrix,
+    handishKeys,
+    handMapFrom,
+    recordHandToken,
+    actionHandColumns,
+    synthActions,
+    siblingActions,
+    siblingHands,
+    globalActions,
+    globalHands,
+    collect,
+    GW_STRATEGY_KEYS,
+    GW_COMBO_TOTAL_KEYS,
     gwHandOrder,
-    detect,
+    strategyArray,
+    totalCombos,
+    axisKeys,
+    handAxisDict,
+    columnValues,
+    scoreColumns,
+    resolveScale,
+    zipWeights,
+    fromActionStrategyArrays,
+    fromMatrices,
+    orderedActionKeys,
+    fromHandListMaps,
+    fromHandDictMaps,
+    RECORD_CONTAINER_KEYS,
+    anyGlobalActions,
+    recordEntries,
+    fromHandRecords,
+    fromActionHandMaps,
+    fromHandNumMaps,
     describe,
-    analyze,
-    ParseError,
+    detect,
   };
 })(typeof globalThis !== "undefined" ? globalThis : this);

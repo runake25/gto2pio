@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GTO Wizard &rarr; PioSOLVER range converter</title>
   <meta name="description" content="Paste a GTO Wizard solution JSON and get a ready-to-use PioSOLVER range string. Runs entirely in your browser - no upload, no server.">
-  <link rel="icon" href="favicon.ico">
-  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="assets/favicon.ico">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <header class="topbar">
@@ -136,7 +136,18 @@
     <a href="https://github.com/runake25/gto2pio">Source on GitHub</a>
   </footer>
 
-  <script src="core.js"></script>
-  <script src="app.js"></script>
+  <!-- the converter: plain scripts, so this order is the dependency order -->
+  <script src="js/lib/common.js"></script>
+  <script src="js/lib/hands.js"></script>
+  <script src="js/lib/actions.js"></script>
+  <script src="js/lib/pio.js"></script>
+  <script src="js/lib/schema.js"></script>
+  <script src="js/lib/parser.js"></script>
+  <script src="js/lib/gto2pio.js"></script>
+  <!-- the page: dom -> render -> files -> main -->
+  <script src="js/ui/dom.js"></script>
+  <script src="js/ui/render.js"></script>
+  <script src="js/ui/files.js"></script>
+  <script src="js/ui/main.js"></script>
 </body>
 </html>

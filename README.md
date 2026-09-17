@@ -18,7 +18,7 @@ there is no server to go down or to pay for.
 
 ## Why there is no backend
 
-The whole converter is `core.js` - plain JavaScript, no dependencies, no build
+The whole converter is JavaScript under `js/lib` - no dependencies, no build
 step, no CDN. That is what makes this site hostable for free on GitHub Pages, and
 it means you can save the files and use the tool offline as well.
 
@@ -81,13 +81,27 @@ off (`.nojekyll`).
 ## Files
 
 ```
-index.html      the whole UI (one page)
-core.js         the converter: hands, actions, schema detection, analyze()
-app.js          UI logic (rendering, copy/download, samples)
-style.css       styling (no framework, dark by default)
-samples/        example payloads; samples/gw_action_solutions.json is synthetic
-favicon.ico     site icon
+index.html            one page, no framework
+js/lib/               the converter (no DOM in here)
+  common.js             shared helpers, python-compatible rounding, ParseError
+  hands.js              the 169 hand classes, combo counts, canonicalisation
+  actions.js            action codes and words -> families and labels
+  pio.js                Pio range emission and combo statistics
+  schema.js             detection of a pasted payload (the seven shapes)
+  parser.js             analyze(): detected strategy -> ready-to-use result
+  gto2pio.js            the public API (GTO2PIO.analyze, GTO2PIO.VERSION, ...)
+js/ui/                the page, one file per concern
+  dom.js                element lookups, UI state, status/error feedback
+  render.js             drawing a result: actions, range, chips, grid, panels
+  files.js              copy/download, samples, the file input
+  main.js               analyze() wiring, presets, disclosures, init()
+css/style.css         styling (no framework, dark by default)
+assets/favicon.ico    site icon
+samples/              example payloads (gw_action_solutions.json is synthetic)
 ```
+
+Every file is a plain `<script>`: each one attaches itself to the `GTO2PIO`
+namespace, so the load order in `index.html` is the only wiring this site needs.
 
 ## How this was verified
 
