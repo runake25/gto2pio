@@ -90,20 +90,54 @@ function setSelection(ids) {
   analyze();
 }
 
-function presetRaiseCall() {
-  if (!UI.dom.state.result) {
+/* The action families present in a result: a group can hold several sizes
+ * (raise:2.5, raise:31.5) or a single action, so presets work on the family. */
+function groupFamilies(result) {
+  return (result ? result.groups : []).map((group) => {
+    let family = "unknown";
+    for (const action of group.actions) {
+      if (action.family && action.family !== "unknown") {
+        family = action.family;
+        break;
+      }
+    }
+    return { id: group.id, family };
+  });
+}
+
+function selectFamilies(wanted, describe) {
+  const result = UI.dom.state.result;
+  if (!result) {
     UI.dom.setInlineStatus("Convert something first, then pick actions.", "working");
     return;
   }
-  const wanted = ["raise", "bet", "call"];
-  const ids = UI.dom.state.result.groups
-    .map((group) => group.id)
-    .filter((id) => wanted.includes(id));
+  const ids = groupFamilies(result)
+    .filter((entry) => wanted.indexOf(entry.family) >= 0)
+    .map((entry) => entry.id);
   if (!ids.length) {
-    UI.dom.setStatus("no raise/bet/call group in this payload", "err");
+    UI.dom.setStatus("no " + describe + " action in this payload", "err");
     return;
   }
   setSelection(ids);
+}
+
+/* Call + every raise size (R2.5, R31.5, ...), all-in left out. */
+function presetRaiseCall() {
+  selectFamilies(["raise", "bet", "call"], "raise/call");
+}
+
+/* Everything that is not a fold: the range that keeps playing the hand. */
+function presetContinues() {
+  const result = UI.dom.state.result;
+  if (!result) {
+    UI.dom.setInlineStatus("Convert something first, then pick actions.", "working");
+    return;
+  }
+  setSelection(
+    groupFamilies(result)
+      .filter((entry) => entry.family !== "fold")
+      .map((entry) => entry.id)
+  );
 }
 
 function presetAll() {
@@ -113,6 +147,27 @@ function presetAll() {
 
 function presetNone() {
   setSelection([]);
+}
+
+/* Two tabs share this page: the converter and the how-to guide. */
+function setTab(name) {
+  const wanted = name === "tutorial" ? "tutorial" : "converter";
+  ["converter", "tutorial"].forEach((key) => {
+    const panel = UI.dom.$("panel-" + key);
+    if (panel) panel.hidden = key !== wanted;
+    document.querySelectorAll('[data-tab="' + key + '"]').forEach((tab) => {
+      const active = key === wanted;
+      tab.classList.toggle("active", active);
+      tab.setAttribute("aria-selected", active ? "true" : "false");
+    });
+  });
+  if (window.history && window.history.replaceState) {
+    window.history.replaceState(null, "", wanted === "tutorial" ? "#tutorial" : "#converter");
+  }
+}
+
+function tabFromHash() {
+  return (window.location.hash || "").indexOf("tutorial") >= 0 ? "tutorial" : "converter";
 }
 
 function bindToggle(buttonId, box) {
@@ -167,17 +222,14 @@ function init() {
   if (!UI.dom.ready()) UI.dom.showStaleBanner();
 
   onClick("analyze-btn", () => analyze({ resetSelection: true }));
-  onClick("example-btn", UI.files.loadExample);
+  onClick("sample-btn", UI.files.loadSample);
   onClick("copy-btn", UI.files.copyRange);
   onClick("download-btn", UI.files.downloadRange);
   onClick("preset-raisecall", presetRaiseCall);
+  onClick("preset-continues", presetContinues);
   onClick("preset-all", presetAll);
   onClick("preset-none", presetNone);
   onClick("clear-btn", clearAll);
-
-  onChange("sample-select", (event) => {
-    if (event.target.value) UI.files.loadSample(event.target.value);
-  });
 
   onChange("file-input", (event) => {
     const file = event.target.files[0];
@@ -226,7 +278,13 @@ function init() {
     );
   });
 
-  UI.files.loadSamples();
+  // tabs: click one, or open the page with #tutorial
+  document.querySelectorAll("[data-tab]").forEach((tab) => {
+    tab.addEventListener("click", () => setTab(tab.dataset.tab));
+  });
+  window.addEventListener("hashchange", () => setTab(tabFromHash()));
+  setTab(tabFromHash());
+
   UI.dom.setStatus("idle");
 }
 
@@ -237,8 +295,10 @@ document.addEventListener("DOMContentLoaded", init);
     analyze,
     setSelection,
     presetRaiseCall,
+    presetContinues,
     presetAll,
     presetNone,
+    setTab,
     bindToggle,
     clearAll,
     init,

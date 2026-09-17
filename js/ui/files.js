@@ -1,6 +1,6 @@
 "use strict";
 
-/* Copy/download, the shipped examples and file input.
+/* Copy/download, the shipped sample and the file input.
  *
  * Plain browser script: every module attaches itself to GTO2PIO.ui, so
  * load order in index.html is the only wiring this site needs.
@@ -9,34 +9,10 @@
   const GTO2PIO = (root.GTO2PIO = root.GTO2PIO || {});
   const UI = GTO2PIO.ui || (GTO2PIO.ui = {});
 
-/* Shipped examples (samples/ next to this file). Listed inline so the page
- * needs no directory listing / API. */
-const SAMPLES = [
-  { file: "gw_action_solutions.json", label: "GTO Wizard action_solutions (169 hands)" },
-  { file: "target_example.json", label: "hand -> action frequencies" },
-  { file: "hand_records.json", label: "one object per hand" },
-];
-
-/* A tiny payload that works offline (file://) and makes the first click useful. */
-const EXAMPLE_PAYLOAD = `{
-  "BB_vs_SB_3bet": {
-    "AA": { "RAISE": 0.8, "CALL": 0.2 },
-    "KK": { "RAISE": 0.7, "CALL": 0.3 },
-    "QQ": { "RAISE": 0.45, "CALL": 0.55 },
-    "JJ": { "RAISE": 0.2, "CALL": 0.8 },
-    "TT": { "RAISE": 0.1, "CALL": 0.9 },
-    "99": { "CALL": 1 },
-    "88": { "CALL": 1 },
-    "77": { "RAISE": 0.05, "CALL": 0.95 },
-    "AKs": { "RAISE": 0.9, "CALL": 0.1 },
-    "AKo": { "RAISE": 0.6, "CALL": 0.4 },
-    "AQs": { "RAISE": 0.5, "CALL": 0.5 },
-    "AQo": { "RAISE": 0.2, "CALL": 0.8 },
-    "AJs": { "RAISE": 0.3, "CALL": 0.7 },
-    "ATs": { "CALL": 1 },
-    "KQs": { "RAISE": 0.25, "CALL": 0.75 }
-  }
-}`;
+/* The one shipped sample: a real GTO Wizard /solution/ response
+ * (samples/gw_action_solutions.json). Everything else you paste yourself. */
+const SAMPLE_FILE = "gw_action_solutions.json";
+const SAMPLE_LABEL = "Load GTO Wizard sample";
 
 async function copyRange() {
   const text = UI.dom.el.range.value;
@@ -72,16 +48,11 @@ function downloadRange() {
   URL.revokeObjectURL(url);
 }
 
-function loadSamples() {
-  SAMPLES.forEach((sample) => {
-    const option = document.createElement("option");
-    option.value = sample.file;
-    option.textContent = sample.label;
-    UI.dom.el.sampleSelect.appendChild(option);
-  });
+function loadSample() {
+  return loadFile(SAMPLE_FILE);
 }
 
-async function loadSample(file) {
+async function loadFile(file) {
   try {
     const response = await fetch("samples/" + encodeURIComponent(file));
     if (!response.ok) {
@@ -103,19 +74,12 @@ async function loadSample(file) {
   }
 }
 
-function loadExample() {
-  UI.dom.el.json.value = EXAMPLE_PAYLOAD;
-  UI.main.analyze({ resetSelection: true });
-}
-
 
   UI.files = {
-    SAMPLES,
-    EXAMPLE_PAYLOAD,
+    SAMPLE_FILE,
+    SAMPLE_LABEL,
     copyRange,
     downloadRange,
-    loadSamples,
     loadSample,
-    loadExample,
   };
 })(typeof globalThis !== "undefined" ? globalThis : this);

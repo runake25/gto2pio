@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.3.4 - 2026-09-17
+
+* **Fixed: the weights.** GTO Wizard's strategy arrays are relative to the combos a
+  hand still has at that node (`total_frequency`), while `total_combos` is absolute.
+  Those are now multiplied, and the payload's own combo totals pick the reading: the
+  shipped response now converts to fold 534.49 / call 491.45 / raise 91.01 combos,
+  exactly what the payload reports, and the false "check the hand axis" warning is
+  gone. Payloads whose hands are all fully in range are unaffected.
+* **Fixed: the "Raise + Call" preset only selected Call** - it matched group ids like
+  `raise`, but every action is its own group now (`raise:31.5`). Presets work on
+  action families again, and a new **Continues** preset (everything but fold) was
+  added next to All / None.
+* **One sample, the real thing.** The other example payloads and the inline
+  *Example* button are gone; there is now a single **Load GTO Wizard sample** button
+  that converts `samples/gw_action_solutions.json`, a real GTO Wizard response.
+* **New "How to use" tab** in the header (Converter / How to use) with a walkthrough
+  of the steps, the numbers, the grid and the options - plain HTML in `index.html`,
+  ready to be rewritten.
+* **New footer**: project blurb plus a GitHub icon button that opens this repository
+  in a new tab.
+* Version badge reports 0.3.4 (assets moved to `?v=0.3.4`).
+
 ## 0.3.3 - 2026-09-17
 
 * **No more merging.** The "Merge raise/bet/all-in sizes" and "Treat all-in as

@@ -340,15 +340,82 @@
     return reordered ? keys.slice().sort() : keys;
   }
 
-  /* Hand order read from any hand-keyed dict with exactly count entries. */
-  function handAxisDict(found, count) {
+  /* Hand order read from any hand-keyed dict with exactly count entries.
+   * Every candidate is kept: the payload's own combo totals then decide which
+   * one is the real axis (see fromActionStrategyArrays). */
+  function handAxisCandidates(found, count) {
+    const candidates = [];
     for (const item of found) {
       if (item.kind !== "hand_num_map" && item.kind !== "hand_dict_map" && item.kind !== "hand_list_map") continue;
       if (!isPlainObject(item.node) || Object.keys(item.node).length !== count) continue;
       const keys = handishKeys(item.node);
-      if (keys.length === count) return [axisKeys(item.node), item.path];
+      if (keys.length !== count) continue;
+      candidates.push({
+        keys: axisKeys(item.node),
+        path: item.path,
+        shares: axisShares(item.node),
+      });
     }
-    return null;
+    return candidates;
+  }
+
+  function handAxisDict(found, count) {
+    const [first] = handAxisCandidates(found, count);
+    return first ? [first.keys, first.path] : null;
+  }
+
+  /* Per-hand in-range frequency of an axis dict.
+   *
+   * GTO Wizard reports a hand's action frequencies relative to the combos that
+   * hand still has at this node, while total_combos / actions_total_combos are
+   * absolute - so a hand that is only half in range folds 100%, not 50%, of the
+   * combos the action actually covers. Scaling by this factor turns the reported
+   * frequencies into the weights PioSOLVER wants (fraction of the whole hand).
+   */
+  function axisShares(node) {
+    if (!isPlainObject(node)) return null;
+    const shares = {};
+    let usable = 0;
+    for (const key of Object.keys(node)) {
+      const row = node[key];
+      if (!isPlainObject(row)) continue;
+      const value = toNumber(lookupKey(row, ["total_frequency"]));
+      if (value === null || value < -1e-9 || value > 1.0 + 1e-9) continue;
+      shares[String(key)] = value;
+      usable += 1;
+    }
+    return usable ? shares : null;
+  }
+
+  /* Weighted combo total of one action, optionally scaled by the hand's range. */
+  function weightedCombos(values, hands, shares) {
+    let weighted = 0;
+    for (let index = 0; index < hands.length && index < values.length; index += 1) {
+      const hand = hands[index];
+      let weight = values[index];
+      if (shares) {
+        const share = shares[hand];
+        weight *= share === undefined ? 1.0 : share;
+      }
+      weighted += weight * comboCount(hand);
+    }
+    return weighted;
+  }
+
+  function totalMatches(weighted, total) {
+    return Math.abs(weighted - total) <= Math.max(0.05, 0.002 * Math.max(total, 1.0));
+  }
+
+  /* Do this hand axis and these weights reproduce every reported combo total? */
+  function checksOut(entries, hands, shares) {
+    let checked = 0;
+    for (const entry of entries) {
+      const total = entry[2];
+      if (total === null || total === undefined) continue;
+      checked += 1;
+      if (!totalMatches(weightedCombos(entry[1], hands, shares), total)) return false;
+    }
+    return checked > 0;
   }
 
   function columnValues(columns) {
@@ -432,12 +499,39 @@
       if (widths.size !== 1) continue;
       const count = entries[0][1].length;
 
-      const axis = handAxisDict(found, count);
+      /* Let the payload's own combos pick the axis *and* the reading of the
+       * frequencies: plain weights first (how most payloads are written),
+       * then weights scaled by each hand's in-range frequency. */
+      const axes = handAxisCandidates(found, count);
+      const verifiable = entries.some((entry) => entry[2] !== null && entry[2] !== undefined);
+      let axis = null;
+      let shares = null;
+      if (verifiable) {
+        for (const candidate of axes) {
+          if (checksOut(entries, candidate.keys, null)) {
+            axis = candidate;
+            break;
+          }
+        }
+        if (axis === null) {
+          for (const candidate of axes) {
+            if (!candidate.shares) continue;
+            if (checksOut(entries, candidate.keys, candidate.shares)) {
+              axis = candidate;
+              shares = candidate.shares;
+              break;
+            }
+          }
+        }
+      }
+      // nothing could be verified: keep the first axis, exactly as before
+      if (axis === null && axes.length) axis = axes[0];
+
       let hands;
       let axisNote;
       if (axis !== null) {
-        hands = axis[0];
-        axisNote = `hand order read from ${axis[1]} (${count} hands)`;
+        hands = axis.keys;
+        axisNote = `hand order read from ${axis.path} (${count} hands)`;
       } else {
         const ordered = gwHandOrder(count);
         if (ordered === null) continue; // 1326 combos with no axis to name them
@@ -445,21 +539,25 @@
         axisNote = `hand order: GTO Wizard's ${count}-hand order (no explicit axis in the payload)`;
       }
 
-      const columns = entries.map((entry) => [entry[0], zipWeights(hands, entry[1])]);
+      const scaledValues = (values) => {
+        if (shares === null) return values;
+        return values.map((value, index) => {
+          const share = shares[hands[index]];
+          return value * (share === undefined ? 1.0 : share);
+        });
+      };
+
+      const columns = entries.map((entry) => [entry[0], zipWeights(hands, scaledValues(entry[1]))]);
 
       const warnings = [];
       let checked = 0;
       for (const entry of entries) {
         const action = entry[0];
-        const values = entry[1];
         const total = entry[2];
         if (total === null || total === undefined) continue;
-        let weighted = 0;
-        for (let index = 0; index < hands.length && index < values.length; index += 1) {
-          weighted += values[index] * comboCount(hands[index]);
-        }
+        const weighted = weightedCombos(entry[1], hands, shares);
         checked += 1;
-        if (Math.abs(weighted - total) > Math.max(0.05, 0.002 * Math.max(total, 1.0))) {
+        if (!totalMatches(weighted, total)) {
           warnings.push(
             `${actionLabel(action)}: the payload reports ${fixed(total, 1)} combos but the ` +
             `hand order gives ${fixed(weighted, 1)} - check the hand axis`
@@ -471,6 +569,12 @@
         `GTO Wizard action_solutions: ${entries.length} actions x ${count} hands at ${foundItem.path}`,
         axisNote,
       ];
+      if (shares !== null) {
+        notes.push(
+          "weights scaled by each hand's in-range frequency: GTO Wizard reports action " +
+          "frequencies relative to the combos a hand still has at this node"
+        );
+      }
       if (checked && !warnings.length) {
         notes.push("hand order cross-checked against the payload's total_combos");
       }
@@ -1169,7 +1273,12 @@
     strategyArray,
     totalCombos,
     axisKeys,
+    handAxisCandidates,
     handAxisDict,
+    axisShares,
+    weightedCombos,
+    totalMatches,
+    checksOut,
     columnValues,
     scoreColumns,
     resolveScale,

@@ -8,7 +8,7 @@
   <link rel="icon" href="assets/favicon.ico">
   <!-- Bump the ?v= on every asset when releasing: browsers cache these files for
        10 minutes, and a cached script paired with a newer page is what breaks. -->
-  <link rel="stylesheet" href="css/style.css?v=0.3.3">
+  <link rel="stylesheet" href="css/style.css?v=0.3.4">
 </head>
 <body>
   <header class="topbar">
@@ -17,12 +17,16 @@
       <p class="sub">Paste a solution JSON, tick the actions you want, copy the Pio range.</p>
     </div>
     <div class="topbar-right">
+      <nav class="tabs" role="tablist" aria-label="Sections">
+        <button type="button" class="tab active" data-tab="converter" role="tab" aria-selected="true">Converter</button>
+        <button type="button" class="tab" data-tab="tutorial" role="tab" aria-selected="false">How to use</button>
+      </nav>
       <span id="status" class="status">idle</span>
       <span class="version" id="version">v-</span>
     </div>
   </header>
 
-  <main class="layout">
+  <main class="layout" id="panel-converter">
     <section class="panel" id="config-panel">
       <div class="panel-head">
         <h2>1 &middot; Paste JSON</h2>
@@ -30,18 +34,16 @@
           <label class="filebtn">Load .json
             <input type="file" id="file-input" accept=".json,.txt,application/json" hidden>
           </label>
-          <select id="sample-select"><option value="">Load sample&hellip;</option></select>
-          <button type="button" id="example-btn" class="ghost">Example</button>
+          <button type="button" id="sample-btn" class="ghost">Load GTO Wizard sample</button>
           <button type="button" id="clear-btn" class="ghost">Clear</button>
         </div>
       </div>
 
-      <textarea id="json-input" spellcheck="false" placeholder='Paste the GTO Wizard response here, for example:
+      <textarea id="json-input" spellcheck="false" placeholder="Paste the JSON of a GTO Wizard solution here - the response that carries action_solutions.
 
-{
-  "AA": { "RAISE": 0.6, "CALL": 0.4 },
-  "KK": { "RAISE": 0.25, "CALL": 0.2 }
-}'></textarea>
+In GTO Wizard, open the node you care about with the browser's network tab open and copy the JSON of the solution request/response. Nothing is uploaded: the conversion happens in this tab.
+
+No payload at hand? Press &quot;Load GTO Wizard sample&quot; (needs a web server, not file://)."></textarea>
 
       <details class="options" open>
         <summary>2 &middot; Options</summary>
@@ -83,6 +85,7 @@
           <h3>3 &middot; Pick actions</h3>
           <div class="row">
             <button type="button" class="ghost" id="preset-raisecall">Raise + Call</button>
+            <button type="button" class="ghost" id="preset-continues">Continues</button>
             <button type="button" class="ghost" id="preset-all">All</button>
             <button type="button" class="ghost" id="preset-none">None</button>
           </div>
@@ -128,25 +131,117 @@
     </section>
   </main>
 
+  <!-- ==========================================================================
+       HOW TO USE TAB
+       Everything inside <section class="tut"> below is the tutorial the
+       "How to use" tab shows - edit it freely, it is plain HTML.
+       The tab button itself is in the header: <button data-tab="tutorial">.
+       ========================================================================== -->
+  <main class="tutorial" id="panel-tutorial" hidden>
+    <section class="tut">
+      <h2>How to use the converter</h2>
+      <p class="lead">
+        Three steps: get the JSON out of GTO Wizard, paste it here, tick the actions you
+        want in the range. Everything happens in this browser tab.
+      </p>
+
+      <ol class="tut-steps">
+        <li>
+          <strong>Copy the solution JSON out of GTO Wizard.</strong>
+          Open the node you care about, then grab the JSON of the solution response
+          (DevTools &rarr; Network &rarr; the request that returns
+          <code>action_solutions</code>). It is the payload with the <code>strategy</code>
+          arrays and the <code>players_info</code> block.
+        </li>
+        <li>
+          <strong>Paste it into the box and press Convert</strong>
+          (or <kbd>Ctrl</kbd>+<kbd>Enter</kbd>). The layout is detected on its own and the
+          tool reports how many hands it read.
+        </li>
+        <li>
+          <strong>Tick the actions that belong in the range.</strong>
+          Each one has its own colour, its own share and its own range text, then hit
+          <strong>Copy</strong> or <strong>Download .txt</strong> and paste the result into
+          PioSOLVER's range field.
+        </li>
+      </ol>
+
+      <h3>Where the numbers come from</h3>
+      <p>
+        GTO Wizard reports a hand's action frequencies relative to the combos that hand
+        still has at that node, and reports the combo totals separately. The converter uses
+        both: a hand that is only half in range at this node also keeps half its weight,
+        which is what PioSOLVER expects. The payload's own combo totals are the check - if a
+        range cannot be reproduced from them, an amber warning appears next to
+        <strong>Convert</strong> instead of a silently wrong range.
+      </p>
+
+      <h3>Reading the 13&times;13 grid</h3>
+      <p>
+        Every cell is a hand and every coloured slice is one of the actions you ticked,
+        with the slice height showing that hand's real split (a hand that folds 60% and
+        calls 40% shows two slices in that proportion). The colours match the tick boxes,
+        so the range you are about to copy is visible at a glance.
+      </p>
+
+      <h3>What the options do</h3>
+      <dl class="tut-options">
+        <dt>Merge suited+offsuit on equal weight</dt>
+        <dd><code>AKs</code> and <code>AKo</code> both at 50% become a single entry, <code>AK:0.5</code>.</dd>
+        <dt>Average per-combo data</dt>
+        <dd>Combo-level payloads (<code>AcKd</code>, <code>AhKs</code>, ...) are averaged into their hand class.</dd>
+        <dt>Decimals</dt>
+        <dd>Decimals kept on the weights: 2 gives <code>AA:0.33</code>, 0 gives plain <code>AA</code>.</dd>
+        <dt>Min weight</dt>
+        <dd>Drops hands below that frequency: 0.05 hides anything under 5%.</dd>
+        <dt>Scale</dt>
+        <dd>How the payload's numbers are read: <code>auto</code> guesses, <code>fraction</code> uses 0-1 as-is, <code>percent</code> divides by 100.</dd>
+      </dl>
+
+      <h3>Good to know</h3>
+      <ul class="tut-notes">
+        <li>The conversion runs entirely in your browser - your JSON is never uploaded.</li>
+        <li>One node at a time: pick the street and the player in GTO Wizard before copying.</li>
+        <li>The <strong>Inspector</strong> under the range shows what was detected (format, score, the hand order it used, notes and warnings) whenever a payload looks off.</li>
+        <li>It converts JSON to a Pio range, not the other way round.</li>
+      </ul>
+
+      <p class="tut-edit">
+        TODO: this tab is yours - replace these notes with your own tutorial.
+        The markup lives in <code>index.html</code> inside <code>&lt;section class="tut"&gt;</code>.
+      </p>
+    </section>
+  </main>
+
   <footer class="footer">
-    <span>Everything runs locally in this page - your JSON never leaves your browser.</span>
-    <span>Not affiliated with GTO Wizard or PioSOLVER.</span>
-    <a href="https://github.com/runake25/gto2pio">Source on GitHub</a>
+    <div class="footer-inner">
+      <div class="footer-text">
+        <strong>GTO Wizard &rarr; PioSOLVER converter</strong>
+        <span>Everything runs locally in this page - your JSON never leaves your browser.</span>
+        <span>Not affiliated with GTO Wizard or PioSOLVER; both are trademarks of their owners.</span>
+      </div>
+      <a class="github" href="https://github.com/runake25/gto2pio" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" fill="currentColor">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/>
+        </svg>
+        <span>View source on GitHub</span>
+      </a>
+    </div>
   </footer>
 
   <!-- the converter: plain scripts, so this order is the dependency order -->
-  <script src="js/lib/common.js?v=0.3.3"></script>
-  <script src="js/lib/hands.js?v=0.3.3"></script>
-  <script src="js/lib/actions.js?v=0.3.3"></script>
-  <script src="js/lib/pio.js?v=0.3.3"></script>
-  <script src="js/lib/schema.js?v=0.3.3"></script>
-  <script src="js/lib/parser.js?v=0.3.3"></script>
-  <script src="js/lib/gto2pio.js?v=0.3.3"></script>
+  <script src="js/lib/common.js?v=0.3.4"></script>
+  <script src="js/lib/hands.js?v=0.3.4"></script>
+  <script src="js/lib/actions.js?v=0.3.4"></script>
+  <script src="js/lib/pio.js?v=0.3.4"></script>
+  <script src="js/lib/schema.js?v=0.3.4"></script>
+  <script src="js/lib/parser.js?v=0.3.4"></script>
+  <script src="js/lib/gto2pio.js?v=0.3.4"></script>
   <!-- the page: dom -> colors -> render -> files -> main -->
-  <script src="js/ui/dom.js?v=0.3.3"></script>
-  <script src="js/ui/colors.js?v=0.3.3"></script>
-  <script src="js/ui/render.js?v=0.3.3"></script>
-  <script src="js/ui/files.js?v=0.3.3"></script>
-  <script src="js/ui/main.js?v=0.3.3"></script>
+  <script src="js/ui/dom.js?v=0.3.4"></script>
+  <script src="js/ui/colors.js?v=0.3.4"></script>
+  <script src="js/ui/render.js?v=0.3.4"></script>
+  <script src="js/ui/files.js?v=0.3.4"></script>
+  <script src="js/ui/main.js?v=0.3.4"></script>
 </body>
 </html>

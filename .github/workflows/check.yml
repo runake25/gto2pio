@@ -39,14 +39,22 @@ jobs:
           same(core.gwHandOrder(169).slice(0, 4).join(","), "22,32o,32s,33", "GTO Wizard hand order");
 
           const payload = fs.readFileSync("samples/gw_action_solutions.json", "utf8");
-          const result = core.analyze(payload);
+          const noMerge = { merge_sizes: false, allin_as_raise: false };
+          const result = core.analyze(payload, noMerge);
           same(result.detection.format_id, "gw_action_solutions", "detected format");
-          same(result.detection.hand_count, 169, "hands");
-          same(result.stats.combos, 150.8, "combos");
-          same(result.stats.percent, 11.37, "percent");
+          same(result.detection.hand_count, 154, "hands that actually play at this node");
+          same(result.stats.combos, 582.46, "combos");
+          same(result.stats.percent, 43.93, "percent");
           same(result.range_text.startsWith("AA,KK,QQ,JJ,TT,"), true, "range prefix");
           same(result.warnings.length, 0, "no warnings for a well-formed payload");
           same(result.grid && Object.keys(result.grid).length, 169, "13x13 grid");
+          same(result.groups.map((group) => group.label).join(","),
+            "Fold,Call,Raise 31.5,All-in", "every action is its own group");
+          // the frequencies are scaled by each hand's in-range share, so these
+          // must reproduce the payload's own combo totals
+          same(result.per_group.fold.stats.combos, 534.49, "fold combos match the payload");
+          same(result.per_group.call.stats.combos, 491.45, "call combos match the payload");
+          same(result.per_group["raise:31.5"].stats.combos, 91.01, "raise combos match the payload");
 
           let threw = false;
           try { core.analyze('{"hello": "world"}'); } catch (error) {

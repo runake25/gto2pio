@@ -14,6 +14,9 @@ Paste a **GTO Wizard solution JSON**, tick the actions you want to keep
 AA,KK,QQ:0.45,JJ:0.45,TT:0.45,99:0.45,88,77,66,55,44,33,22,AK,AQ,AJ,AT,A9:0.45,...
 ```
 
+No payload at hand? **Load GTO Wizard sample** converts a real 218 KB response.
+There is also a **How to use** tab next to the converter with a walkthrough.
+
 Everything happens inside your browser tab: **your hands are never uploaded**, and
 there is no server to go down or to pay for.
 
@@ -29,11 +32,14 @@ it means you can save the files and use the tool offline as well.
   including the real GTO Wizard `/solution/` response with 169-element
   `strategy` arrays and its aggregated per-hand `actions_total_combos` report
   (see [Supported payloads](#supported-payloads)).
-* **Gets the hand axis right.** GTO Wizard's strategy arrays are not in the order
-  the 169-hand grid is usually drawn in, so the axis is read from the payload
-  itself (`players_info[].simple_hand_counters`) and then **cross-checked against
-  the payload's own `total_combos`**. When the numbers disagree you get an
-  explicit warning instead of a silently wrong range.
+* **Gets the weights right.** GTO Wizard reports a hand's action frequencies relative
+  to the combos that hand still has at that node, and reports the combo totals
+  separately - so the converter multiplies them: a hand that is only half in range
+  also keeps half its weight, which is what PioSOLVER expects. The hand axis is read
+  from the payload itself (`players_info[].simple_hand_counters`), every axis
+  candidate is validated against the payload's own `total_combos`, and when a range
+  cannot be reproduced from them you get an amber warning instead of a silently wrong
+  range.
 * **Every action stays separate.** `F`, `C`, `R2.5`, `R31.5`, `RAI` each get
   their own tick box, colour, share and range text. Nothing is merged behind your
   back, so an all-in can never hide inside \"raise\", and a 31.5 raise never mixes
@@ -119,8 +125,11 @@ js/ui/                the page, one file per concern
   main.js               analyze() wiring, presets, disclosures, init()
 css/style.css         styling (no framework, dark by default)
 assets/favicon.ico    site icon
-samples/              example payloads (gw_action_solutions.json is synthetic)
+samples/              the shipped payload: a real GTO Wizard response (218 KB)
 ```
+
+The **how-to tab** lives in `index.html` inside `<section class="tut">` - plain
+HTML, edit it freely.
 
 Every file is a plain `<script>`: each one attaches itself to the `GTO2PIO`
 namespace, so the load order in `index.html` is the only wiring this site needs.
@@ -133,12 +142,17 @@ namespace, so the load order in `index.html` is the only wiring this site needs.
   notes and warnings on every one, including a real 177 KB GTO Wizard payload.
   That reference implementation and its harness stay in the author's working tree,
   because this repository is deliberately just the deployable site.
-* A headless-browser smoke test drives the page the way a user does: paste a
-  169-hand payload, click **Convert**, then assert the range, the stats chips, the
-  169-cell grid, the coloured slices, the colour legend and swatches, the five
-  option tips, the per-action panels, an aggregated `actions_total_combos`
-  payload (checking that `R31.5` and `RAI` stay separate actions), the empty-box
-  and unrecognised-payload error paths, and that no JavaScript error was logged.
+* A headless-browser smoke test drives the page the way a user does: load the
+  shipped sample, click **Convert**, then assert the range (582.46 combos / 43.93%),
+  the stats chips, the 169-cell grid, the coloured slices, the colour legend and
+  swatches, the five option tips, the per-action panels, the **Load sample** button,
+  the tab switch to the tutorial, the footer's GitHub link, an aggregated
+  `actions_total_combos` payload (checking that `R31.5` and `RAI` stay separate
+  actions), the empty-box and unrecognised-payload error paths, the stale-script
+  banner, and that no JavaScript error was logged.
+* The per-action combo totals of the shipped payload (fold 534.49, call 491.45,
+  raise 31.5 91.01) are asserted in CI, so the frequency scaling cannot silently
+  regress.
 * CI (`.github/workflows/check.yml`) syntax-checks both scripts and converts the
   shipped sample in Node on every push.
 
